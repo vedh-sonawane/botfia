@@ -10,82 +10,111 @@ presses the top of the rocker for ON, the bottom for OFF, then returns to REST s
 the switch still works by hand. The ON/OFF/REST angles are saved to
 light_config.json on the Pi so they survive a reboot.
 
-Hardware PWM setup on the Pi (once):
-  1. Add to /boot/firmware/config.txt:   dtoverlay=pwm-2chan
-  2. Reboot.
-  On the Pi 5, GPIO 18 is hardware PWM channel 2 on chip 2 (see PWM_CHANNEL/PWM_CHIP).
+Hardware PWM is driven straight through the kernel's sysfs interface, so there is
+no extra Python dependency. The one-time Pi setup (see README):
+  /boot/firmware/config.txt:  dtoverlay=pwm-2chan,pin=18,func=2,pin2=19,func2=2
+This maps GPIO 18 to PWM0_CHAN2, which shows up as pwmchip0 / channel 2. The
+member of the 'gpio' group can drive it without root (a udev rule hands the
+exported channel to that group a moment after export, so we wait for it).
 
-If the rpi_hardware_pwm library or the PWM hardware is not available (e.g. running
-on a laptop), this module falls back to SIMULATION mode: it logs moves instead of
-driving a servo, so the calibration page and CLI still work for development.
+Off the Pi (e.g. a laptop), there is no /sys/class/pwm, so this falls back to
+SIMULATION mode: it logs moves instead of driving a servo.
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
 # ---- Servo timing ----
-SERVO_HZ = 50
-MIN_US = 500             # pulse width at 0 degrees
-MAX_US = 2500            # pulse width at 180 degrees
-PERIOD_US = 1_000_000 / SERVO_HZ   # 20000 us at 50 Hz
+PERIOD_NS = 20_000_000       # 20 ms period = 50 Hz
+MIN_US = 500                 # pulse width at 0 degrees
+MAX_US = 2500                # pulse width at 180 degrees
 
-PRESS_DWELL_S = 0.5      # hold the arm against the rocker this long
-SETTLE_S = 0.3          # let the arm settle after returning to REST
+PRESS_DWELL_S = 0.5          # hold the arm against the rocker this long
+SETTLE_S = 0.3              # let the arm settle after returning to REST
 
-# ---- Pi 5 hardware PWM mapping for GPIO 18 ----
-PWM_CHANNEL = 2
-PWM_CHIP = 2
+# ---- Hardware PWM location (verified on this Pi 5) ----
+PWM_CHIP = "/sys/class/pwm/pwmchip0"
+PWM_CHANNEL = 2              # GPIO 18 = PWM0_CHAN2
 
 CONFIG_PATH = Path(__file__).with_name("light_config.json")
 DEFAULT_ANGLES = {"on": 60, "off": 120, "rest": 90}
 
-try:
-    from rpi_hardware_pwm import HardwarePWM
-except Exception:
-    HardwarePWM = None
+
+class _SysfsPWM:
+    """Thin wrapper over /sys/class/pwm for one channel. Simulates if absent."""
+
+    def __init__(self):
+        self.chan = f"{PWM_CHIP}/pwm{PWM_CHANNEL}"
+        self.sim = not os.path.isdir(PWM_CHIP)
+        if self.sim:
+            print("[light] no /sys/class/pwm — SIMULATION mode (no servo movement).")
+            return
+        self._export()
+        self._write("enable", 0)         # configure while disabled
+        self._write("period", PERIOD_NS)
+
+    def _export(self):
+        if not os.path.isdir(self.chan):
+            try:
+                with open(f"{PWM_CHIP}/export", "w") as f:
+                    f.write(str(PWM_CHANNEL))
+            except OSError:
+                pass                      # already exported is fine
+        # The udev rule hands the new channel to the 'gpio' group a moment
+        # after export; wait until the enable file is writable.
+        for _ in range(30):
+            if os.path.isdir(self.chan) and os.access(f"{self.chan}/enable", os.W_OK):
+                return
+            time.sleep(0.1)
+
+    def _write(self, name, value):
+        if self.sim:
+            return
+        with open(f"{self.chan}/{name}", "w") as f:
+            f.write(str(value))
+
+    def set_duty_ns(self, duty_ns):
+        if self.sim:
+            print(f"[light:sim] duty {duty_ns} ns")
+            return
+        self._write("duty_cycle", int(duty_ns))
+        self._write("enable", 1)
+
+    def close(self):
+        if not self.sim:
+            try:
+                self._write("enable", 0)
+            except OSError:
+                pass
 
 
 class LightSwitch:
     def __init__(self):
         self.angles = self._load_angles()
         self.state = "unknown"
-        self._pwm = None
-
-        if HardwarePWM is not None:
-            try:
-                self._pwm = HardwarePWM(pwm_channel=PWM_CHANNEL, hz=SERVO_HZ, chip=PWM_CHIP)
-                self._pwm.start(self._duty(self.angles["rest"]))
-            except Exception as e:
-                print(f"[light] hardware PWM unavailable ({e}); SIMULATION mode.")
-                self._pwm = None
-
-        if self._pwm is None:
-            print("[light] SIMULATION mode — no real servo movement.")
+        self._pwm = _SysfsPWM()
+        self.rest()                       # park at REST so the switch works by hand
 
     # ---- angle helpers ----
     def _clamp(self, angle):
         return max(0, min(180, int(angle)))
 
-    def _duty(self, angle):
-        """Convert an angle (0-180) to a duty cycle percentage for the servo."""
-        us = MIN_US + (MAX_US - MIN_US) * self._clamp(angle) / 180
-        return us / PERIOD_US * 100
+    def _duty_ns(self, angle):
+        pulse_us = MIN_US + (MAX_US - MIN_US) * self._clamp(angle) / 180
+        return int(pulse_us * 1000)
 
     def move_to(self, angle):
         """Move the arm to an angle and leave it there (used for live calibration)."""
-        angle = self._clamp(angle)
-        if self._pwm:
-            self._pwm.change_duty_cycle(self._duty(angle))
-        else:
-            print(f"[light:sim] move to {angle} deg")
+        self._pwm.set_duty_ns(self._duty_ns(angle))
 
     # ---- flips ----
     def _flip(self, press_angle, new_state):
         self.move_to(press_angle)
         time.sleep(PRESS_DWELL_S)
-        self.move_to(self.angles["rest"])   # return to REST so the switch works by hand
+        self.move_to(self.angles["rest"])  # return to REST so the switch works by hand
         time.sleep(SETTLE_S)
         self.state = new_state
 
@@ -107,10 +136,10 @@ class LightSwitch:
         if rest is not None:
             self.angles["rest"] = self._clamp(rest)
         self._save_angles()
-        self.rest()                          # park at the new rest position
+        self.rest()                        # park at the new rest position
 
     def status(self):
-        return {"state": self.state, "angles": self.angles, "simulated": self._pwm is None}
+        return {"state": self.state, "angles": self.angles, "simulated": self._pwm.sim}
 
     def _load_angles(self):
         if CONFIG_PATH.exists():
@@ -125,8 +154,7 @@ class LightSwitch:
         CONFIG_PATH.write_text(json.dumps(self.angles, indent=2))
 
     def close(self):
-        if self._pwm:
-            self._pwm.stop()
+        self._pwm.close()
 
 
 # ---- CLI: python light_switch.py [on|off|rest|status|test [N]] ----

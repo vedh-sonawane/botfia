@@ -20,14 +20,19 @@ the switch still works by hand.
 1. Enable hardware PWM on GPIO 18. Add this line to `/boot/firmware/config.txt`:
 
    ```
-   dtoverlay=pwm-2chan
+   dtoverlay=pwm-2chan,pin=18,func=2,pin2=19,func2=2
    ```
 
-2. Reboot the Pi.
+   (`func=2` is the value the overlay uses to map GPIO 18 to `PWM0_CHAN2` on the
+   Pi 5 — confirmed with `dtoverlay -h pwm-2chan`.)
 
-(On the Pi 5, GPIO 18 is hardware PWM channel 2 on chip 2 — already set in
-`light_switch.py` as `PWM_CHANNEL` / `PWM_CHIP`. If the arm doesn't move, that
-mapping is the first thing to check.)
+2. Reboot the Pi. After boot, `pinctrl get 18` should show `PWM0_CHAN2`, and
+   `/sys/class/pwm/pwmchip0` should exist.
+
+GPIO 18 shows up as `pwmchip0`, channel 2 — already set in `light_switch.py` as
+`PWM_CHIP` / `PWM_CHANNEL`. No Python PWM library is needed; the servo is driven
+straight through sysfs. The `milo` user can drive it without root because it is in
+the `gpio` group (a udev rule hands the exported channel to that group).
 
 ## Install
 
