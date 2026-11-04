@@ -1,0 +1,22 @@
+# Secrets — never commit
+.env
+**/secrets.h
+**/wifi_secrets.h
+
+# Device-specific servo calibration (generated on the Pi)
+pi/light_config.json
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
