@@ -69,7 +69,7 @@ function refresh(){fetch('/status').then(r=>r.json()).then(s=>{
 for(const i of ids){
   el(i).addEventListener('input',()=>{
     el(i+'v').textContent=el(i).value;
-    fetch('/servo?angle='+el(i).value,{method:'POST'});
+    fetch('/aim?which='+i+'&angle='+el(i).value,{method:'POST'});
   });
 }
 function test(which){fetch('/lights/'+which,{method:'POST'}).then(r=>r.json()).then(line)}
@@ -100,6 +100,16 @@ def servo():
     if angle is None:
         return jsonify(error="missing angle"), 400
     sw.move_to(int(angle))
+    return jsonify(ok=True)
+
+
+@app.route("/aim", methods=["POST"])
+def aim():
+    which = request.args.get("which")
+    angle = request.args.get("angle")
+    if which is None or angle is None:
+        return jsonify(error="missing which/angle"), 400
+    sw.aim(which, int(angle))
     return jsonify(ok=True)
 
 

@@ -29,11 +29,15 @@ from pathlib import Path
 
 # ---- Servo timing ----
 PERIOD_NS = 20_000_000       # 20 ms period = 50 Hz
-MIN_US = 500                 # pulse width at 0 degrees
-MAX_US = 2500                # pulse width at 180 degrees
+MIN_US = 400                 # pulse width at 0 degrees (widened for more travel)
+MAX_US = 2600                # pulse width at 180 degrees (widened for more travel)
 
 PRESS_DWELL_S = 0.5          # hold the arm against the rocker this long
 SETTLE_S = 0.3              # let the arm settle after returning to REST
+# Glide: instead of snapping to a target, step toward it so the arm moves
+# smoothly. Speed is GLIDE_STEP_DEG / GLIDE_STEP_DELAY_S (deg per second).
+GLIDE_STEP_DEG = 2
+GLIDE_STEP_DELAY_S = 0.02    # ~100 deg/s. Larger = slower.
 
 # ---- Hardware PWM location (verified on this Pi 5) ----
 PWM_CHIP = "/sys/class/pwm/pwmchip0"
@@ -83,18 +87,25 @@ class _SysfsPWM:
         self._write("duty_cycle", int(duty_ns))
         self._write("enable", 1)
 
+    def disable(self):
+        """Stop driving the servo so it relaxes (no holding current, no stall)."""
+        if self.sim:
+            print("[light:sim] relax")
+            return
+        try:
+            self._write("enable", 0)
+        except OSError:
+            pass
+
     def close(self):
-        if not self.sim:
-            try:
-                self._write("enable", 0)
-            except OSError:
-                pass
+        self.disable()
 
 
 class LightSwitch:
     def __init__(self):
         self.angles = self._load_angles()
         self.state = "unknown"
+        self._cur = self.angles["rest"]   # last angle commanded (for gliding)
         self._pwm = _SysfsPWM()
         self.rest()                       # park at REST so the switch works by hand
 
@@ -107,15 +118,42 @@ class LightSwitch:
         return int(pulse_us * 1000)
 
     def move_to(self, angle):
-        """Move the arm to an angle and leave it there (used for live calibration)."""
+        """Jump the arm to an angle (instant; used for live calibration sliders)."""
+        angle = self._clamp(angle)
         self._pwm.set_duty_ns(self._duty_ns(angle))
+        self._cur = angle
+
+    def aim(self, which, angle):
+        """Live calibration: record this angle (in memory) AND move the arm there,
+        so the slider, the Test buttons, and Save all use the same value."""
+        angle = self._clamp(angle)
+        if which in self.angles:
+            self.angles[which] = angle
+        self.move_to(angle)
+
+    def _glide(self, target):
+        """Move smoothly from the current angle to target in small steps."""
+        target = self._clamp(target)
+        step = GLIDE_STEP_DEG if target >= self._cur else -GLIDE_STEP_DEG
+        a = self._cur
+        while a != target:
+            a += step
+            if (step > 0 and a > target) or (step < 0 and a < target):
+                a = target
+            self.move_to(a)
+            time.sleep(GLIDE_STEP_DELAY_S)
 
     # ---- flips ----
+    # REST is the flat/center position, between ON and OFF. A flip glides out to
+    # one side, holds, then glides straight back to flat. Because it always
+    # returns to flat (never continues to the other side), the arm never sweeps
+    # across and knocks the switch the other way.
     def _flip(self, press_angle, new_state):
-        self.move_to(press_angle)
+        self._glide(press_angle)            # out to the press side
         time.sleep(PRESS_DWELL_S)
-        self.move_to(self.angles["rest"])  # return to REST so the switch works by hand
+        self._glide(self.angles["rest"])    # straight back to flat
         time.sleep(SETTLE_S)
+        self._pwm.disable()                 # relax at flat
         self.state = new_state
 
     def on(self):
@@ -125,7 +163,9 @@ class LightSwitch:
         self._flip(self.angles["off"], "off")
 
     def rest(self):
-        self.move_to(self.angles["rest"])
+        self._glide(self.angles["rest"])
+        time.sleep(SETTLE_S)
+        self._pwm.disable()                # relax at REST (no holding current)
 
     # ---- calibration ----
     def set_angles(self, on=None, off=None, rest=None):

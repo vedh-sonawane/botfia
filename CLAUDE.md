@@ -112,7 +112,9 @@ botfia/
 
 ## Build phases — DO ONE AT A TIME. EACH PHASE ENDS WITH A TEST I RUN.
 
-1. Light switch on the Pi (SG90 on GPIO 18, hardware PWM). A Python module that turns the light off and on by flipping the wall switch, with ON, OFF, and REST angles saved to a config file on the Pi so they survive a reboot. A local calibration web page with sliders for the ON, OFF, and REST angles. After each flip the servo returns to REST so the switch still works by hand. Done when it flips the real light 20 times in a row.
+1. Light switch on the Pi (SG90 on GPIO 18, hardware PWM). **DONE.** A Python module (`pi/light_switch.py`) flips the wall switch via sysfs hardware PWM; ON/OFF/REST angles save to `pi/light_config.json` and survive reboot. Calibration web page (`pi/light_calibrate.py`) with live sliders. REST is the flat/center position; each flip glides out to one side and straight back to flat so the arm never sweeps across and double-triggers. Verified flipping the real light 10+ times in a row.
+   - Hardware PWM: `/boot/firmware/config.txt` has `dtoverlay=pwm-2chan,pin=18,func=2,pin2=19,func2=2` → GPIO 18 = `pwmchip0` channel 2. Pulse range 400-2600us.
+   - Power: the servo runs off the Pi's 5V (power bank). The power bank is marginal and occasionally brown-out-reboots the Pi on servo spikes. For long sessions, power the servo from a separate 5V source (shared ground). The code relaxes the servo at REST to minimize current.
 2. Game engine + phone web app on the Pi, no hardware. Join, seats, roles, night moves, day, voting, win check. Narration is printed as text for now. Done when a full game is playable on phones.
 3. Voice, Claude narration, and music.
 4. ESP32 over Wi-Fi: eyes, smile, light sensor, and the full night flow (Pi flips the light off, the ESP32 light sensor confirms dark, retry if not, then eyes on).
