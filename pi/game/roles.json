@@ -1,0 +1,12 @@
+{
+  "_comment": "Role counts per player count. Roles: mafia, doctor, detective, villager.",
+  "4":  {"mafia": 1, "doctor": 1, "detective": 1, "villager": 1},
+  "5":  {"mafia": 1, "doctor": 1, "detective": 1, "villager": 2},
+  "6":  {"mafia": 1, "doctor": 1, "detective": 1, "villager": 3},
+  "7":  {"mafia": 2, "doctor": 1, "detective": 1, "villager": 3},
+  "8":  {"mafia": 2, "doctor": 1, "detective": 1, "villager": 4},
+  "9":  {"mafia": 2, "doctor": 1, "detective": 1, "villager": 5},
+  "10": {"mafia": 3, "doctor": 1, "detective": 1, "villager": 5},
+  "11": {"mafia": 3, "doctor": 1, "detective": 1, "villager": 6},
+  "12": {"mafia": 3, "doctor": 1, "detective": 1, "villager": 7}
+}
