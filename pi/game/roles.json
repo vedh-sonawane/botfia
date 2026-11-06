@@ -1,5 +1,5 @@
 {
-  "_comment": "Role counts per player count. Roles: mafia, doctor, detective, villager.",
+  "_comment": "Default role counts per player count. Always 1 doctor + 1 detective; mafia scales; the rest are villagers. Editable by the host in setup. 4 is allowed for testing.",
   "4":  {"mafia": 1, "doctor": 1, "detective": 1, "villager": 1},
   "5":  {"mafia": 1, "doctor": 1, "detective": 1, "villager": 2},
   "6":  {"mafia": 1, "doctor": 1, "detective": 1, "villager": 3},

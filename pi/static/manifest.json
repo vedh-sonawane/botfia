@@ -1,0 +1,13 @@
+{
+  "name": "Botfia",
+  "short_name": "Botfia",
+  "description": "A quiet robot that hosts Mafia.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

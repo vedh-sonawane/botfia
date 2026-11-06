@@ -1,0 +1,24 @@
+# Botfia autostart. Copy to /etc/systemd/system/botfia.service on the Pi, then:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now botfia
+# Adjust User and the paths if your username or project location differ.
+
+[Unit]
+Description=Botfia — Mafia host
+After=network-online.target sound.target bluetooth.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=milo
+WorkingDirectory=/home/milo/botfia
+EnvironmentFile=-/home/milo/botfia/.env
+Environment=BOTFIA_PORT=80
+ExecStart=/home/milo/botfia/pi/.venv/bin/python -m pi.app
+Restart=always
+RestartSec=3
+# allow binding port 80 without full root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

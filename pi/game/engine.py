@@ -1,43 +1,38 @@
-"""Botfia game engine — the Mafia state machine.
+"""Botfia game engine — pass-and-play Mafia on one shared device.
 
-This is PLAIN CODE. It decides every outcome: role assignment, night kills,
-doctor saves, detective results, votes, and wins. Claude is never involved here.
+This is PLAIN CODE. It decides every outcome. Claude is never involved here; the
+only thing the engine asks an outside narrator for is a public line of text, and
+it only ever hands that narrator PUBLIC information.
 
-Secret safety is the core rule. Two views exist:
-  - public_state(): what everyone (and later, Claude for narration) may see. It
-    NEVER contains roles, who the mafia targeted, who the doctor saved, or
-    detective results. Roles are only revealed at the end of the game.
-  - player_view(pid): what one player sees on their own phone, including their
-    own role and their own private results (e.g. a detective's check result).
+Two views:
+  - public_state(): safe for the host screen and general UI. NEVER contains roles
+    or secret actions while the game is in progress.
+  - device_state(): the one screen the shared device should show right now. During
+    a private turn it contains ONLY the current player's own role/action — never
+    anyone else's. Physical privacy (press-and-hold, hand-off) is enforced by the
+    client; the engine makes sure the data for a turn belongs to that turn only.
 
-Phases: lobby -> reveal -> night -> day -> vote -> (loop) -> end
+Phases: setup -> reveal -> night -> morning -> day -> vote -> (loop) -> end
+Private turns (reveal, night, secret vote) go around the circle with a hand-off
+between each player and a minimum turn time so roles can't be read from timing.
 """
 
 import json
 import random
+import time
 from collections import Counter
-from enum import Enum
 from pathlib import Path
 
 ROLES_PATH = Path(__file__).with_name("roles.json")
 
+PHASES = ("setup", "reveal", "night", "morning", "day", "vote", "end")
 
-class Phase(str, Enum):
-    LOBBY = "lobby"       # players join; host configures and starts
-    REVEAL = "reveal"     # each player privately confirms their role
-    NIGHT = "night"       # everyone taps; mafia/doctor/detective act
-    DAY = "day"           # announce what happened; discuss
-    VOTE = "vote"         # players vote to eliminate someone
-    END = "end"           # winner announced, all roles revealed
-
-
-class Player:
-    def __init__(self, pid, name, seat):
-        self.id = pid
-        self.name = name
-        self.seat = seat
-        self.role = None
-        self.alive = True
+ROLE_BLURB = {
+    "mafia": "Mafia. Each night, choose someone to remove.",
+    "doctor": "Doctor. Each night, choose someone to protect.",
+    "detective": "Detective. Each night, check one person.",
+    "villager": "Villager. You have no night action. Find the mafia by day.",
+}
 
 
 def load_role_table():
@@ -45,39 +40,77 @@ def load_role_table():
     return {k: v for k, v in data.items() if not k.startswith("_")}
 
 
+class Player:
+    def __init__(self, seat, name):
+        self.seat = seat
+        self.name = name
+        self.role = None
+        self.alive = True
+
+
+def _default_narrate(event, ctx):
+    # Fallback narrator so the engine works standalone (tests, sim). Replaced by
+    # the app with the Claude-backed narrator. Always offline and secret-free.
+    from ..narration import fallback
+    return fallback.line(event, ctx)
+
+
 class GameEngine:
-    def __init__(self, role_table=None):
+    def __init__(self, narrate=None, min_turn_seconds=4.0, role_table=None):
+        self.narrate = narrate or _default_narrate
+        self.min_turn_seconds = float(min_turn_seconds)
         self.role_table = role_table or load_role_table()
-        self.players = {}            # pid -> Player
-        self.phase = Phase.LOBBY
+
+        self.players = []          # ordered by seat (circle order)
+        self.phase = "setup"
         self.day_number = 0
-        self.winner = None           # "mafia" or "town"
-        # per-round working state (secret)
-        self._night_actions = {}     # pid -> target pid or None
-        self._votes = {}             # pid -> target pid or None
-        self._detective_results = {} # detective pid -> {"target_seat": s, "is_mafia": bool}
-        # public announcements (NO secrets) — the lines narration will speak
-        self.public_log = []
+        self.winner = None
+        self.public_log = []       # list of public narration lines (no secrets)
+        self.history = []          # per-night summary for the end screen (public once ended)
 
-    # ---------- lobby ----------
-    def add_player(self, name, seat):
-        if self.phase != Phase.LOBBY:
+        # pass-and-play cursor (reveal / night / secret vote)
+        self._order = []           # seats, in turn order for the current round
+        self._cursor = 0
+        self._stage = None         # None | "handoff" | "active"
+        self._turn_start = 0.0
+        self._seen_reveal = set()
+
+        # secret per-round working state
+        self._mafia_pick = None        # seat
+        self._doctor_protect = None    # seat
+        self._last_protected = None    # seat, for the no-repeat rule
+        self._detective_results = {}   # detective seat -> {"seat","name","is_mafia"}
+        self._votes = {}               # voter seat -> target seat or None
+        self._revote_used = False
+
+        # hub bookkeeping
+        self._last_morning = None      # public: {"died": name|None}
+        self._last_vote = None         # public: {"out": name|None, "tie": bool}
+        self._day_stage = "discussion"  # "discussion" -> vote; "post_vote" -> next night
+        self._doctor_no_repeat = True
+        self._reveal_roles_on_death = True
+        self._voting_style = "secret"
+        self._revote_on_tie = True
+        self._discussion_seconds = 180
+
+    # ---------------------------------------------------------------- setup
+    def configure(self, names, options=None):
+        if self.phase != "setup":
             raise ValueError("game already started")
-        name = (name or "").strip()[:20] or "Player"
-        if any(p.seat == seat for p in self.players.values()):
-            raise ValueError("seat taken")
-        pid = f"p{len(self.players) + 1}_{random.randint(1000, 9999)}"
-        self.players[pid] = Player(pid, name, seat)
-        return pid
+        names = [str(n).strip()[:20] or f"Player {i+1}" for i, n in enumerate(names)]
+        if len(names) < 4:
+            raise ValueError("need at least 4 players")
+        if len(names) > 12:
+            raise ValueError("max 12 players")
+        self.players = [Player(i, n) for i, n in enumerate(names)]
+        opts = options or {}
+        self._doctor_no_repeat = bool(opts.get("doctor_no_repeat", True))
+        self._reveal_roles_on_death = bool(opts.get("reveal_roles_on_death", True))
+        self._voting_style = opts.get("voting_style", "secret")
+        self._revote_on_tie = bool(opts.get("revote_on_tie", True))
+        self._discussion_seconds = int(opts.get("discussion_seconds", 180))
 
-    def _alive(self):
-        return [p for p in self.players.values() if p.alive]
-
-    def _alive_by_role(self, role):
-        return [p for p in self._alive() if p.role == role]
-
-    # ---------- start / roles ----------
-    def start_game(self):
+    def start(self):
         n = len(self.players)
         key = str(n)
         if key not in self.role_table:
@@ -88,153 +121,339 @@ class GameEngine:
         if len(bag) != n:
             raise ValueError("role counts do not match player count")
         random.shuffle(bag)
-        for player, role in zip(self.players.values(), bag):
-            player.role = role
-        self.phase = Phase.REVEAL
-        self.public_log.append("The game begins.")
+        for p, role in zip(self.players, bag):
+            p.role = role
+        self.phase = "reveal"
+        self._order = [p.seat for p in self.players]   # everyone, circle order
+        self._cursor = 0
+        self._stage = "handoff"
+        self._seen_reveal = set()
+        self._emit("game_start", player_count=n)
 
-    # ---------- night ----------
-    def begin_night(self):
-        self.phase = Phase.NIGHT
-        self.day_number += 1
-        self._night_actions = {}
-        self._detective_results = {}
+    # --------------------------------------------------------------- helpers
+    def _emit(self, event, **public_ctx):
+        line = self.narrate(event, public_ctx)
+        self.public_log.append(line)
+        return line
 
-    def submit_night_action(self, pid, target_pid):
-        """Every alive player submits once. Villagers pass target_pid=None."""
-        if self.phase != Phase.NIGHT:
-            raise ValueError("not night")
-        player = self.players.get(pid)
-        if not player or not player.alive:
-            raise ValueError("unknown or dead player")
-        self._night_actions[pid] = target_pid
-        # Detective learns their result privately, immediately.
-        if player.role == "detective" and target_pid in self.players:
-            t = self.players[target_pid]
-            self._detective_results[pid] = {
-                "target_seat": t.seat,
-                "target_name": t.name,
-                "is_mafia": t.role == "mafia",
-            }
+    def _by_seat(self, seat):
+        return self.players[seat] if 0 <= seat < len(self.players) else None
 
-    def night_done(self):
-        return all(p.id in self._night_actions for p in self._alive())
+    def _alive(self):
+        return [p for p in self.players if p.alive]
 
-    def resolve_night(self):
-        """Kill the mafia's target unless the doctor saved them. Returns the
-        public result (no secrets): the dead player's seat/name, or None."""
-        mafia_targets = [
-            self._night_actions.get(m.id)
-            for m in self._alive_by_role("mafia")
+    def _alive_by_role(self, role):
+        return [p for p in self._alive() if p.role == role]
+
+    def _current(self):
+        if not self._order or self._cursor >= len(self._order):
+            return None
+        return self._by_seat(self._order[self._cursor])
+
+    def _next_name(self):
+        cur = self._current()
+        return cur.name if cur else ""
+
+    def _elapsed_ok(self):
+        return (time.monotonic() - self._turn_start) >= self.min_turn_seconds
+
+    def _alive_options(self, exclude_self_seat=None):
+        return [
+            {"seat": p.seat, "name": p.name}
+            for p in self._alive()
+            if p.seat != exclude_self_seat
         ]
-        mafia_targets = [t for t in mafia_targets if t in self.players]
-        victim_pid = None
-        if mafia_targets:
-            victim_pid = Counter(mafia_targets).most_common(1)[0][0]
 
-        saved = [
-            self._night_actions.get(d.id)
-            for d in self._alive_by_role("doctor")
-        ]
-        result = None
-        if victim_pid and victim_pid not in saved:
-            victim = self.players[victim_pid]
-            victim.alive = False
-            result = {"seat": victim.seat, "name": victim.name}
-            self.public_log.append(f"Morning. {victim.name} did not wake up.")
+    # ------------------------------------------------------- pass-and-play turn
+    def begin_turn(self):
+        """Hand-off -> active. Called when the next player presses and holds."""
+        if self._stage != "handoff":
+            return
+        self._stage = "active"
+        self._turn_start = time.monotonic()
+
+    def finish_turn(self):
+        """Active -> next player. Enforces the minimum turn time."""
+        if self._stage != "active":
+            return False
+        if not self._elapsed_ok():
+            return False
+        cur = self._current()
+        if self.phase == "reveal" and cur:
+            self._seen_reveal.add(cur.seat)
+        self._cursor += 1
+        if self._cursor >= len(self._order):
+            self._end_round()
         else:
-            self.public_log.append("Morning. Everyone is still here.")
+            self._stage = "handoff"
+        return True
 
-        self.phase = Phase.DAY
+    def _end_round(self):
+        if self.phase == "reveal":
+            self._stage = None
+            self.phase = "reveal_done"
+        elif self.phase == "night":
+            self._resolve_night()
+        elif self.phase == "vote":
+            self._resolve_secret_vote()
+
+    # ------------------------------------------------------------------ night
+    def begin_night(self):
+        self.phase = "night"
+        self.day_number += 1
+        self._order = [p.seat for p in self.players if p.alive]
+        self._cursor = 0
+        self._stage = "handoff"
+        self._mafia_pick = None
+        self._doctor_protect = None
+        self._detective_results = {}
+        self._emit("night_start", day_number=self.day_number)
+
+    def submit_night(self, target_seat):
+        """Record the current player's action. Does not advance the turn —
+        a player may change their pick, and the detective must view the result."""
+        if self.phase != "night" or self._stage != "active":
+            return
+        cur = self._current()
+        if not cur:
+            return
+        target = self._by_seat(target_seat) if target_seat is not None else None
+        if cur.role == "mafia":
+            if target and target.alive:
+                self._mafia_pick = target.seat
+        elif cur.role == "doctor":
+            if target and target.alive:
+                self._doctor_protect = target.seat
+        elif cur.role == "detective":
+            if target and target.alive:
+                self._detective_results[cur.seat] = {
+                    "seat": target.seat,
+                    "name": target.name,
+                    "is_mafia": target.role == "mafia",
+                }
+        # villager: decoy pick, nothing recorded.
+
+    def _resolve_night(self):
+        victim = self._by_seat(self._mafia_pick) if self._mafia_pick is not None else None
+        saved = (self._doctor_protect is not None and self._doctor_protect == self._mafia_pick)
+        died = None
+        if victim and victim.alive and not saved:
+            victim.alive = False
+            died = victim.name
+        self._last_protected = self._doctor_protect
+        self._last_morning = {"died": died}
+        self.history.append({"night": self.day_number, "died": died})
+        self.phase = "morning"
+        self._stage = None
+        if died:
+            self._emit("morning_death", name=died)
+        else:
+            self._emit("morning_safe")
         self._check_win()
-        return result
 
-    # ---------- vote ----------
-    def begin_vote(self):
-        self.phase = Phase.VOTE
+    def morning_continue(self):
+        if self.phase != "morning":
+            return
+        if self.winner:
+            return
+        self.phase = "day"
+        self._day_stage = "discussion"
+        self._emit("day_start", alive_count=len(self._alive()))
+
+    # -------------------------------------------------------------------- day
+    def start_vote(self):
+        if self.phase != "day":
+            return
+        self._emit("discussion_end")
+        self.phase = "vote"
         self._votes = {}
+        self._revote_used = False
+        if self._voting_style == "secret":
+            self._order = [p.seat for p in self.players if p.alive]
+            self._cursor = 0
+            self._stage = "handoff"
+        else:
+            self._stage = None   # open vote: host enters the result
 
-    def submit_vote(self, pid, target_pid):
-        if self.phase != Phase.VOTE:
-            raise ValueError("not vote")
-        player = self.players.get(pid)
-        if not player or not player.alive:
-            raise ValueError("unknown or dead player")
-        self._votes[pid] = target_pid  # None allowed = abstain
+    def submit_vote(self, target_seat):
+        """Secret vote: record the current voter's choice (None = abstain)."""
+        if self.phase != "vote" or self._stage != "active":
+            return
+        cur = self._current()
+        if not cur:
+            return
+        if target_seat is None:
+            self._votes[cur.seat] = None
+        else:
+            t = self._by_seat(target_seat)
+            self._votes[cur.seat] = t.seat if (t and t.alive) else None
 
-    def vote_done(self):
-        return all(p.id in self._votes for p in self._alive())
+    def set_open_vote(self, target_seat):
+        """Open vote: the host enters who the group voted out (None = no one)."""
+        if self.phase != "vote" or self._voting_style != "open":
+            return
+        out = self._by_seat(target_seat) if target_seat is not None else None
+        self._apply_elimination(out)
 
-    def resolve_vote(self):
-        """Eliminate the player with the most votes. A tie eliminates no one."""
-        tally = Counter(t for t in self._votes.values() if t in self.players)
-        result = None
+    def _resolve_secret_vote(self):
+        tally = Counter(t for t in self._votes.values() if t is not None)
+        out = None
         if tally:
             top = tally.most_common()
             if len(top) == 1 or top[0][1] > top[1][1]:
-                out = self.players[top[0][0]]
-                out.alive = False
-                result = {"seat": out.seat, "name": out.name}
-                self.public_log.append(f"{out.name} was voted out.")
-            else:
-                self.public_log.append("The vote was tied. No one was eliminated.")
+                out = self._by_seat(top[0][0])
+            elif self._revote_on_tie and not self._revote_used:
+                # tie -> one revote
+                self._revote_used = True
+                self._votes = {}
+                self._order = [p.seat for p in self.players if p.alive]
+                self._cursor = 0
+                self._stage = "handoff"
+                self._emit("vote_tie")
+                return
+        self._apply_elimination(out, tie=(out is None and bool(tally)))
+
+    def _apply_elimination(self, out, tie=False):
+        self._stage = None
+        if out and out.alive:
+            out.alive = False
+            self._last_vote = {"out": out.name, "tie": False}
+            self._emit("vote_out", name=out.name)
+            if self._reveal_roles_on_death:
+                self._emit("reveal_role", name=out.name, role=out.role)
+        elif tie:
+            self._last_vote = {"out": None, "tie": True}
+            self._emit("vote_tie")
         else:
-            self.public_log.append("No votes were cast.")
-
-        self.phase = Phase.DAY
+            self._last_vote = {"out": None, "tie": False}
+            self._emit("vote_none")
+        self.phase = "day"
+        self._day_stage = "post_vote"
         self._check_win()
-        return result
 
-    # ---------- win check ----------
+    def day_continue(self):
+        """After a vote result, the host moves on to the next night (or the game
+        has already ended)."""
+        if self.phase != "day" or self.winner:
+            return
+        self.begin_night()
+
+    # ------------------------------------------------------------- win check
     def _check_win(self):
         mafia = len(self._alive_by_role("mafia"))
-        town = len(self._alive()) - mafia
+        others = len(self._alive()) - mafia
         if mafia == 0:
             self.winner = "town"
-            self.phase = Phase.END
-            self.public_log.append("The town wins.")
-        elif mafia >= town:
+        elif mafia >= others:
             self.winner = "mafia"
-            self.phase = Phase.END
-            self.public_log.append("The mafia wins.")
+        if self.winner:
+            self.phase = "end"
+            self._emit("town_win" if self.winner == "town" else "mafia_win")
 
-    # ---------- views ----------
+    # ----------------------------------------------------------------- views
     def public_state(self):
-        """Safe for everyone. No roles or secret actions during play."""
+        """Safe for everyone. No roles while the game is in progress."""
         state = {
-            "phase": self.phase.value,
+            "phase": self.phase,
             "day_number": self.day_number,
-            "players": sorted(
-                ({"seat": p.seat, "name": p.name, "alive": p.alive}
-                 for p in self.players.values()),
-                key=lambda x: x["seat"],
-            ),
+            "players": [
+                {"seat": p.seat, "name": p.name, "alive": p.alive}
+                for p in self.players
+            ],
+            "alive_count": len(self._alive()),
             "log": list(self.public_log),
+            "line": self.public_log[-1] if self.public_log else "",
             "winner": self.winner,
+            "voting_style": self._voting_style,
+            "discussion_seconds": self._discussion_seconds,
         }
-        if self.phase == Phase.END:
-            # Roles are public ONLY once the game is over.
-            state["reveal"] = sorted(
-                ({"seat": p.seat, "name": p.name, "role": p.role}
-                 for p in self.players.values()),
-                key=lambda x: x["seat"],
-            )
+        if self.phase == "end":
+            state["reveal"] = [
+                {"seat": p.seat, "name": p.name, "role": p.role}
+                for p in self.players
+            ]
+            state["history"] = list(self.history)
         return state
 
-    def player_view(self, pid):
-        """What one player sees: their own role and their own private info."""
-        player = self.players.get(pid)
-        if not player:
-            return None
-        view = {
-            "seat": player.seat,
-            "name": player.name,
-            "role": player.role,
-            "alive": player.alive,
-            "phase": self.phase.value,
-            "submitted_night": pid in self._night_actions,
-            "submitted_vote": pid in self._votes,
-        }
-        if player.role == "detective" and pid in self._detective_results:
-            view["detective_result"] = self._detective_results[pid]
-        return view
+    def device_state(self):
+        """The single screen the shared device should render right now. During a
+        private turn it carries ONLY the current actor's own secret info."""
+        p = self.phase
+        if p == "setup":
+            return {"screen": "lobby"}
+        if p == "reveal_done":
+            return {"screen": "ready_night", "line": "Everyone has their role."}
+        if p == "morning":
+            return {
+                "screen": "morning",
+                "night": False,
+                "line": self.public_log[-1] if self.public_log else "",
+                "died": (self._last_morning or {}).get("died"),
+                "winner": self.winner,
+            }
+        if p == "day":
+            return {
+                "screen": "day",
+                "stage": self._day_stage,
+                "line": self.public_log[-1] if self.public_log else "",
+                "discussion_seconds": self._discussion_seconds,
+                "voting_style": self._voting_style,
+                "last_vote": self._last_vote,
+            }
+        if p == "end":
+            return {
+                "screen": "end",
+                "winner": self.winner,
+                "reveal": [{"name": pl.name, "role": pl.role} for pl in self.players],
+                "history": list(self.history),
+            }
+
+        # Open vote: the host enters the result; no pass-and-play cursor.
+        if p == "vote" and self._voting_style == "open":
+            return {"screen": "vote_open", "options": self._alive_options()}
+
+        # --- private, pass-and-play turns (reveal / night / vote) ---
+        cur = self._current()
+        if cur is None:
+            return {"screen": "ready_night"}
+        if self._stage == "handoff":
+            return {"screen": "handoff", "phase": p, "next_name": cur.name,
+                    "night": p == "night"}
+
+        # active turn — only this player's own data
+        if p == "reveal":
+            d = {"screen": "reveal", "name": cur.name, "role": cur.role,
+                 "blurb": ROLE_BLURB.get(cur.role, ""),
+                 "min_turn_seconds": self.min_turn_seconds}
+            if cur.role == "mafia":
+                d["teammates"] = [m.name for m in self._alive_by_role("mafia")
+                                  if m.seat != cur.seat]
+            return d
+        if p == "night":
+            d = {"screen": "night", "name": cur.name, "night": True,
+                 "kind": cur.role, "min_turn_seconds": self.min_turn_seconds}
+            if cur.role == "mafia":
+                d["prompt"] = "Choose someone to remove."
+                d["options"] = self._alive_options(exclude_self_seat=cur.seat)
+                pick = self._by_seat(self._mafia_pick) if self._mafia_pick is not None else None
+                d["current_pick"] = pick.seat if pick else None
+            elif cur.role == "doctor":
+                d["prompt"] = "Choose someone to protect."
+                d["options"] = self._alive_options()
+                if self._doctor_no_repeat and self._last_protected is not None:
+                    d["blocked_seat"] = self._last_protected
+            elif cur.role == "detective":
+                d["prompt"] = "Choose someone to check."
+                d["options"] = self._alive_options(exclude_self_seat=cur.seat)
+                res = self._detective_results.get(cur.seat)
+                if res:
+                    d["result"] = {"name": res["name"], "is_mafia": res["is_mafia"]}
+            else:
+                d["prompt"] = "Who do you suspect most?"
+                d["options"] = self._alive_options(exclude_self_seat=cur.seat)
+            return d
+        if p == "vote":
+            return {"screen": "vote", "name": cur.name,
+                    "options": self._alive_options(),
+                    "min_turn_seconds": self.min_turn_seconds}
+        return {"screen": "lobby"}

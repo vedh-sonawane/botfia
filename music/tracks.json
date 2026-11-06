@@ -1,0 +1,12 @@
+{
+  "_comment": "Placeholder entries. Replace with your real downloaded tracks. Each entry: id (unique), file (path relative to music/), mood (one of: calm, uneasy, tense, final). The code checks the file exists before playing, so unreplaced placeholders simply never play. Use pi/audio/import_music.py to regenerate this file from your downloads, or edit by hand. See music/README.md for where to get tracks.",
+  "tracks": [
+    { "id": "calm-01", "file": "REPLACE_calm_01.ogg", "mood": "calm" },
+    { "id": "calm-02", "file": "REPLACE_calm_02.ogg", "mood": "calm" },
+    { "id": "uneasy-01", "file": "REPLACE_uneasy_01.ogg", "mood": "uneasy" },
+    { "id": "uneasy-02", "file": "REPLACE_uneasy_02.ogg", "mood": "uneasy" },
+    { "id": "tense-01", "file": "REPLACE_tense_01.ogg", "mood": "tense" },
+    { "id": "tense-02", "file": "REPLACE_tense_02.ogg", "mood": "tense" },
+    { "id": "final-01", "file": "REPLACE_final_01.ogg", "mood": "final" }
+  ]
+}

@@ -1,10 +1,21 @@
 # Secrets — never commit
 .env
+wifi_secrets
 **/secrets.h
 **/wifi_secrets.h
 
-# Device-specific servo calibration (generated on the Pi)
+# Device-specific, generated on the Pi
 pi/light_config.json
+pi/botfia_config.json
+pi/audio/cache/
+pi/audio/voices/
+
+# Downloaded music (keep tracks.json + README, not the audio files)
+music/*.mp3
+music/*.wav
+music/*.ogg
+music/*.flac
+music/*.m4a
 
 # PlatformIO
 .pio/

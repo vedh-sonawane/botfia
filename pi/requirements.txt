@@ -1,1 +1,10 @@
 flask>=3.0
+anthropic>=0.40    # Claude narration (optional at runtime — falls back if absent)
+
+# Audio (pi/audio/*) adds NO pip packages. It uses system binaries instead, to
+# keep memory low on the 1GB Pi:
+#   - TTS:   the `piper` binary (download separately; see pi/audio/tts.py).
+#   - Music: `ffplay` from ffmpeg  ->  sudo apt install ffmpeg
+#   - WAV playback: aplay (ALSA, default on the Pi); ffplay/paplay/afplay/winsound
+#     are used as fallbacks on dev machines.
+# All audio degrades to a logged no-op when these are missing.

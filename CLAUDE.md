@@ -1,131 +1,260 @@
 # Botfia
 
-Botfia is a physical robot that hosts the party game Mafia. It sits on the table, shuffles the role cards, runs the night and day phases, turns the room's light off and on, and narrates the game out loud. Players use their phones to confirm their role, make night moves, and vote.
+Botfia is a physical robot that hosts the party game Mafia. It sits on the table,
+runs the night and day phases, turns the room's light off and on, lights its eyes
+and smile, and narrates the game out loud. The game is **pass-and-play on one
+shared device** — there are no personal phones, no cameras, and no physical role
+cards. Botfia assigns roles itself and the device is passed around the circle.
 
 ## STYLE RULES — READ FIRST, APPLY TO EVERYTHING
 
-NOTHING IN THIS PROJECT SHOULD BE CRINGE. THIS APPLIES TO NARRATION, CLAUDE PROMPTS, THE PHONE UI, MUSIC, NAMES, CODE COMMENTS, AND DOCS.
+NOTHING IN THIS PROJECT SHOULD BE CRINGE. Narration, UI, text, music, names, code
+comments, docs. Everything.
 
-- NARRATION IS SHORT, CALM, DRY, AND SERIOUS. A quiet, confident narrator. Understated is creepier than dramatic.
-- NO JOKES, NO PUNS, NO CATCHPHRASES, NO EVIL LAUGHS, NO "MWAHAHA", NO EMOJIS, NO EXCLAMATION MARKS.
-- NO CLICHES: no "darkness descends", "fate", "sinister", "doom", "the night is young", "a chill in the air".
-- SAY THE MINIMUM. Right tone: "The town is asleep. Close your eyes." / "Morning. Daniel did not wake up."
-- PHONE UI IS MINIMAL, DARK, AND CLEAN. Plain fonts. No emojis, no neon, no spooky fonts, no skulls, no blood, no glow effects, no confetti.
-- MUSIC IS INSTRUMENTAL ONLY AND QUIET. NO SOUND EFFECTS: no thunder, wolves, screams, or creaking doors.
-- NAMES AND TEXT ARE PLAIN AND PROFESSIONAL. No hype words, no "MafiaMaster3000"-style names.
+- NARRATION IS SHORT, CALM, DRY, AND SERIOUS. A quiet, confident narrator.
+  Understated is creepier than dramatic.
+- NO JOKES, NO PUNS, NO CATCHPHRASES, NO EVIL LAUGHS, NO "MWAHAHA", NO EMOJIS,
+  NO EXCLAMATION MARKS.
+- NO CLICHES: no "darkness descends", "fate", "sinister", "doom", "the night is
+  young", "a chill in the air".
+- SAY THE MINIMUM. Right tone: "The town is asleep." / "Morning. Daniel did not
+  wake up."
+- MUSIC IS INSTRUMENTAL AND QUIET. NO SOUND EFFECTS: no thunder, wolves, screams,
+  creaking doors.
 - IF YOU ARE UNSURE WHETHER SOMETHING IS CRINGE, IT IS. LEAVE IT OUT.
 
-## How a game works
+## UI RULES — NO COMPROMISE
 
-1. Setup: players join a web page hosted by the Pi on the local Wi-Fi, enter their name, and pick their seat number. The host sets the number of players and roles.
-2. Shuffle: the role cards go into a drum. The drum spins (gear motor), then stops with its opening facing up. Each player reaches in and draws one card without looking.
-3. Roles: each player privately selects the role on their card in their phone page.
-4. Night: Botfia announces the night. The Pi flips the wall light off with its own servo. The light sensor on the ESP32 (on the table) confirms the room is dark over Wi-Fi (if not, retry the flip). Then the red LED eyes and smile turn on and quiet music starts.
-   - EVERY player taps something on their phone every night, so nobody can tell who has a real role. Mafia choose a victim, the doctor chooses someone to save, the detective chooses someone to check (the result appears privately on the detective's phone only), and villagers tap a neutral button.
-5. Day: the light turns on, the eyes and smile turn off, and Botfia announces what happened in a short line written by Claude. Then a discussion timer runs, players vote on their phones, and the eliminated player is announced. Check for a win.
-6. End: announce the winning side and reveal all roles.
+THE UI MUST BE INSANELY WELL MADE, NOT FLASHY. Cinematic, restrained, flawless —
+like the best premium app you've used.
 
-Roles for v1: Mafia, Doctor, Detective, Villager. Role counts per player count live in a config file.
+- Dark, minimal, premium. Beautiful typography, generous spacing, perfect
+  alignment, a tight color palette.
+- Smooth, purposeful animations. Every motion feels deliberate. Nothing gimmicky.
+- NO emojis, neon, spooky fonts, skulls, blood, glitch effects, confetti, or
+  cheesy gradients.
+- Night mode: when the room is dark, the screen goes to a near-black theme with
+  low-contrast deep-red accents so it lights only the person holding it.
+- Huge tap targets, one-handed, works in the dark.
+- Installable full-screen PWA. Screen wake lock. Haptics on supported devices.
+- Polish every state: loading, error, reconnecting, empty, end of game.
+- Must look perfect at phone, tablet, and laptop sizes.
+
+## How the game works — PASS-AND-PLAY ON ONE SHARED DEVICE
+
+One device (phone, tablet, or laptop on the Pi's Wi-Fi) opens the web app and is
+passed around the circle.
+
+Roles: Mafia, Doctor, Detective, Villager. Default counts (editable in setup):
+- 5-6 players: 1 Mafia; 7-9: 2 Mafia; 10-12: 3 Mafia. Always 1 Doctor, 1
+  Detective. Everyone else is a Villager.
+
+SETUP
+- Host enters player names in circle order (the pass order) and can adjust role
+  counts, discussion time, voting style, and volumes.
+- Role reveal: the device is passed around. Each player presses and holds to see
+  their role; it hides the instant they let go. Mafia also see their teammates.
+  Tap done and pass on.
+
+NIGHT
+- Botfia announces the night. The Pi flips the light off; the ESP32 photoresistor
+  confirms the room is dark (retry the flip up to 2x); then eyes and smile fade on
+  and quiet music plays. Botfia speaks very little at night.
+- The device goes around the circle. EVERY player gets a turn:
+  - Mafia: choose a victim. Later Mafia see the current pick and can change it;
+    the last pick counts.
+  - Doctor: choose someone to protect. Config: can't protect the same person two
+    nights in a row.
+  - Detective: choose someone to check; the answer shows privately (press-and-hold).
+  - Villager: a decoy screen ("who do you suspect most?") that looks and takes the
+    same time as a real turn.
+- EVERY TURN LOOKS AND TAKES ROUGHLY THE SAME TIME. Enforce a minimum turn time so
+  nobody can read roles from timing or screen shape. A neutral "pass to [next]"
+  hand-off screen separates players; the next player must press-and-hold to begin.
+  No back button or gesture may ever reveal a previous player's screen.
+
+MORNING
+- Light on, eyes and smile fade off. Botfia announces what happened BY NAME with a
+  short Claude line (who died, or that nobody did). Eliminated roles are revealed
+  (configurable).
+
+DAY
+- Big, calm discussion countdown. Host can pause, add time, or skip.
+- Voting, two styles (host picks): Secret (pass the device, vote privately) or
+  Open (show of hands; host enters who was voted out). Ties: one revote, then
+  nobody is eliminated if still tied (configurable). Botfia announces the result.
+
+END
+- Town wins when all Mafia are eliminated. Mafia wins when Mafia equal or
+  outnumber everyone else. Botfia announces the winner and reveals every role.
+  A clean end screen summarizes the game (who did what each night).
+
+HOST CONTROLS (always available, behind a deliberate gesture so players don't hit
+them by accident): pause, repeat last line, skip, volume, light test, end, restart.
 
 ## Architecture
 
-- Raspberry Pi 5 (1GB RAM): the brain. Mounted at the wall switch, powered by a 5V power bank. Runs the game engine, the phone web server, Claude API calls, text-to-speech, and music (to the Sony speaker over Bluetooth). Also drives the light-switch SG90 servo directly from its GPIO (hardware PWM), since the Pi sits right at the switch.
-- ESP32-WROOM-32: on the table (the robot body). Drives the eye LEDs, smile LEDs, light sensor, shuffle drum motor (TB6612 + encoder), and head stepper (TMC2209). Receives commands from the Pi over Wi-Fi.
-- Arduino Uno: NOT used in this design. Its jobs moved to the ESP32.
-- Sony speaker: all audio. Connect over Bluetooth (the Pi 5 has no headphone jack).
-- USB webcam: deferred to a later phase. The Pi now sits at the switch, not on the robot, so how the camera connects for head turning and reading card backs will be decided then.
+- RASPBERRY PI 5 (1GB), mounted at the wall on a 5V power bank. The brain: game
+  engine, web app server, Claude API, text-to-speech, music, and the light-switch
+  servo (local, hardware PWM — already working; keep that code). Audio goes to the
+  Sony speaker over Bluetooth.
+- ESP32-WROOM-32 on the table, powered by a USB charger. Drives the two red eye
+  LEDs, the smile LEDs, and a photoresistor that confirms the room is dark. Talks
+  to the Pi over Wi-Fi with auto-reconnect and a heartbeat. THIS BOARD HAS NO 5V
+  PIN — LEDs run from its 3.3V GPIO.
+- SONY SPEAKER: Bluetooth from the Pi; auto-reconnect on boot; status shown on the
+  host screen.
+- SHARED DEVICE: any phone/tablet/laptop on the Pi's Wi-Fi opens the web app.
+  Make connecting effortless (mDNS `botfia.local`, clear IP fallback, PWA install).
+- NOT USED: Arduino, USB camera, touch pads, personal phones, physical cards, and
+  motors (shuffle drum, head turning). Motors are a possible later phase — leave a
+  clean, empty hook (`pi/hardware/motors.py` stub) and nothing more.
 
-Communication:
-- Pi to ESP32: HTTP with simple JSON endpoints on the local network.
-- The light-switch servo is local to the Pi (direct GPIO), so it needs no network.
+Communication (Pi -> ESP32): HTTP + JSON on the local network. The light-switch
+servo is local to the Pi (direct GPIO), no network.
+
+## Lights and eyes
+
+- Night: Pi flips the light off. ESP32 photoresistor checks the room went dark; if
+  still bright, retry the flip (up to 2x). Once dark, eyes and smile fade on.
+- If still not dark after retries: continue the game, show a quiet warning on the
+  host screen. Never block the game.
+- Morning: light on, eyes and smile fade off.
+- Auto-calibrate the "dark" threshold at setup by reading the room light-on and
+  light-off.
+- If the ESP32 is offline, the game continues normally without the eyes.
+
+## Claude narration
+
+- Anthropic Python SDK. API key in `.env` (`ANTHROPIC_API_KEY`), never committed.
+- Model in config. Default for narration: `claude-sonnet-4-6` (the current Sonnet;
+  `claude-sonnet-5-5` is not a real model id).
+- The narration prompt includes the STYLE RULES word for word. Max two sentences
+  per line.
+- GAME LOGIC IS PLAIN CODE. Claude only writes lines and picks music. Claude never
+  decides outcomes.
+- NEVER LEAK SECRETS. Public narration and its prompts only ever get public
+  information — never who is Mafia, who the doctor saved, or detective results.
+  Automated tests prove secrets never reach the narration layer.
+- No waiting: pre-generate upcoming lines while the game runs (e.g. write both
+  possible morning outcomes during the night) so Botfia speaks instantly.
+- If the API or internet fails, fall back to a large bank of prewritten lines that
+  follow the style rules. The game must never break.
+
+## Voice and music
+
+- TTS: Piper, local on the Pi. Pick the calmest natural voice. Provide a command
+  to audition candidate voices. Keep TTS swappable. Pre-render lines to audio so
+  there is no delay.
+- Music: a `music/` folder + `music/tracks.json` (id, file, mood: calm, uneasy,
+  tense, final). Claude picks a track id from the list by game state; code checks
+  the id exists before playing. Low volume, smooth crossfades, music ducks under
+  narration.
+
+## Reliability
+
+- Everything starts on boot via systemd. Plug in the power bank and Botfia is
+  ready.
+- Health screen in the host controls: Wi-Fi, ESP32, speaker, Claude API, light.
+- Keep it light for 1GB RAM. No local LLMs or heavy vision.
+- A full simulation mode runs on a laptop with no hardware (mocked light, mocked
+  ESP32, audio on the laptop) so a whole game is playable for testing.
+- Automated tests: game logic, win conditions, secret-leak checks, equal turn
+  timing, hand-off privacy.
+- Run a complete simulated game end to end before declaring done.
 
 ## Hardware inventory — ONLY THESE PARTS EXIST
 
-- Raspberry Pi 5 1GB
-- ESP32-WROOM-32 dev board (CP2102 USB chip)
-- Arduino Uno R3 (Elegoo Most Complete Starter Kit: LEDs, resistors, photoresistor, buttons, small 28BYJ-48 stepper with ULN2003, LCD, etc.) — NOT used in the current design, but the kit's LEDs, resistors, and photoresistor are still used (wired to the ESP32).
-- NEMA 17 stepper (1.5A, 12V) + TMC2209 driver
-- 12V encoder gear motor (100 RPM) + TB6612FNG driver
-- ONE SG90 servo
-- USB webcam
-- Sony Bluetooth speaker
-- 30V 5A bench power supply
-- Old laptops, old mice, wires
+- Raspberry Pi 5 1GB (brain, at the wall switch, 5V power bank).
+- ESP32-WROOM-32 dev board (CP2102), on the table, USB-charger powered. NO 5V pin.
+- SG90 servo — the light switch, on the Pi (already wired and calibrated).
+- Elegoo starter-kit parts still in use: 2 red LEDs (eyes), 2 LEDs (smile), 220 ohm
+  resistors, photoresistor, 10k resistor, breadboard, jumper wires.
+- Sony Bluetooth speaker.
+- 5V power bank (Pi), USB charger (ESP32).
+- NOT USED: Arduino Uno, USB webcam, NEMA 17 + TMC2209, gear motor + TB6612.
 
-THERE IS ONLY ONE SERVO, AND IT BELONGS TO THE LIGHT SWITCH (driven by the Pi). DO NOT USE SERVOS ANYWHERE ELSE. THERE IS NO ESP32-CAM. DO NOT DESIGN AROUND NEW PARTS UNLESS I APPROVE IT.
+DO NOT DESIGN AROUND NEW PARTS UNLESS I APPROVE IT. There is ONE servo and it
+belongs to the light switch (on the Pi).
 
-## Core rules for the code
+## Pin map
 
-- GAME LOGIC IS PLAIN CODE, NOT CLAUDE. A state machine decides phases, kills, saves, votes, and wins. Claude only writes narration lines and picks music. Claude never decides outcomes.
-- NEVER LEAK SECRETS. Public narration, and the prompts used to write it, must never contain who is Mafia, who the doctor saved, or detective results. Only pass Claude public information. Write a test that checks this.
-- The game must keep working if the Claude API or internet fails. Fall back to plain prewritten lines that follow the style rules.
-- The game must keep working if the ESP32 (robot hardware) is unreachable over Wi-Fi. Log it and continue. The light switch is local to the Pi, so it does not depend on the network.
-- Keep everything light enough for 1GB of RAM. No local language models, no heavy vision models.
-- The API key lives in a .env file (ANTHROPIC_API_KEY) and is never committed. Add .env and Wi-Fi secrets to .gitignore.
-- The Claude model is set in config. Default: claude-haiku-5-5 (fast and cheap for short lines).
-- Call Claude once per narration moment, never in a loop.
-
-## Voice
-
-- Use a natural-sounding text-to-speech voice. Start with Piper (local, free) and keep the TTS code swappable.
-- The narration prompt must include the STYLE RULES section word for word. Maximum two sentences per line.
-- Lower the music volume while Botfia is speaking.
-
-## Music
-
-- A music/ folder of royalty-free instrumental tracks, plus music/tracks.json listing each track's id, file, and mood (calm, uneasy, tense, final).
-- Claude picks a track id from that list based on the game state (phase, players left). The code checks that the id exists before playing.
-- Low volume, crossfade between tracks.
-
-## Hardware notes
-
-- Motors run from the bench power supply at 12V. The Pi runs from a 5V power bank (USB-C).
-- The ESP32 GND, the motor driver GNDs, and the power supply GND must all be connected together.
-- TMC2209: set the motor current with the Vref screw for a 1.5A motor. Never unplug the motor while powered.
-- TB6612FNG handles about 1.2A continuous. Keep the drum light.
-- Photoresistor: voltage divider with a 10k resistor into an ESP32 ADC pin. Use an ADC1 pin (GPIO 32-39); ADC2 does not work while Wi-Fi is on. ESP32 ADC reads 0-3.3V.
-- Every LED gets a 220 ohm resistor.
-- The SG90 is powered from the Pi's 5V (header pin 2, fed by the power bank), ground on pin 6, signal on GPIO 18. An SG90 can briefly pull a few hundred mA; if the Pi browns out, power the servo from a separate 5V source and share ground with the Pi.
-
-## Pin map (suggested — update this when things are actually wired)
-
-Raspberry Pi 5 (light switch) — BCM GPIO numbering:
+Raspberry Pi 5 (light switch) — BCM numbering, already wired:
 - SG90 signal (orange): GPIO 18 (hardware PWM), physical pin 12
 - SG90 power (red): 5V, physical pin 2
 - SG90 ground (brown): GND, physical pin 6
+- Hardware PWM: `/boot/firmware/config.txt` has
+  `dtoverlay=pwm-2chan,pin=18,func=2,pin2=19,func2=2` → GPIO 18 = pwmchip0 ch2.
 
-ESP32-WROOM-32 (robot hardware). Avoid the flash pins (6-11) and strapping pins (0, 2, 5, 12, 15) for these:
-- Red eye LEDs: GPIO 25, GPIO 26 (PWM via LEDC, for fading)
-- Smile LEDs: GPIO 27 (PWM)
-- Photoresistor (light sensor): GPIO 34 (ADC1, input only)
-- TB6612 (drum motor): PWMA GPIO 14, AIN1 GPIO 16, AIN2 GPIO 17, STBY GPIO 4
-- Encoder: A GPIO 32, B GPIO 33
-- TMC2209 (head stepper): STEP GPIO 22, DIR GPIO 23, EN GPIO 21
+ESP32-WROOM-32 (table unit). Avoid flash pins (6-11) and strapping pins (0,2,5,12,15):
+- Left eye LED: GPIO 25 (PWM via LEDC) → 220 ohm → LED → GND
+- Right eye LED: GPIO 26 (PWM) → 220 ohm → LED → GND
+- Smile (2 LEDs): GPIO 27 (PWM); each LED has its own 220 ohm to GND (parallel)
+- Photoresistor: GPIO 34 (ADC1, input only). Divider: 3.3V → photoresistor → GPIO 34
+  → 10k → GND. ESP32 ADC reads 0-4095 (ADC1 works with Wi-Fi on; ADC2 does not).
+- Power: ESP32 from a USB charger. LEDs run off its 3.3V GPIO (≈6 mA/LED through
+  220 ohm). Keep the photoresistor on ADC1.
+
+## Pi <-> ESP32 HTTP contract
+
+ESP32 serves JSON on port 80, reachable at `botfia-robot.local` and by IP. The Pi
+polls `GET /status` as the heartbeat (timeout = offline; game continues).
+
+- `GET  /status` → `{name, ip, rssi, uptime_s, light_raw, dark, threshold, eyes, smile}`
+- `POST /face/on`  (body `{fade_ms}`) → eyes + smile fade on
+- `POST /face/off` (body `{fade_ms}`) → eyes + smile fade off
+- `POST /eyes/on` / `POST /eyes/off` / `POST /smile/on` / `POST /smile/off`
+- `GET  /light` → `{raw, dark, threshold}`
+- `POST /calibrate` (body `{state:"light"|"dark"}`) → store that ambient reading;
+  threshold is set midway between the two.
 
 ## Folder layout
 
 botfia/
-- CLAUDE.md
-- pi/ (Python: game server, phone web app, narration, music, and the light-switch servo control)
-- esp32-robot/ (ESP32 firmware: eyes, smile, light sensor, drum, head — PlatformIO)
-- music/
+- CLAUDE.md, WIRING.md, README.md
+- .env (ANTHROPIC_API_KEY; gitignored), wifi_secrets (gitignored)
+- pi/
+  - app.py                  web server: PWA + host console + game API
+  - game/engine.py          pass-and-play state machine (plain code)
+  - game/roles.json         role counts per player count + defaults
+  - narration/claude.py     Anthropic SDK narration (secret-safe, pre-generated)
+  - narration/fallback.py   large prewritten line bank (style-compliant)
+  - narration/prompts.py    the prompt (STYLE RULES verbatim) + PUBLIC-only inputs
+  - audio/tts.py            Piper wrapper + audition command + pre-render cache
+  - audio/music.py          track selection, crossfade, duck-under-narration
+  - hardware/light.py       light switch (reuses the working servo code)
+  - hardware/esp32.py       HTTP client for the table unit (eyes/smile/light)
+  - hardware/speaker.py     Bluetooth connect/status
+  - hardware/motors.py      empty stub for a possible later phase
+  - sim/                    laptop simulation (mock light, mock ESP32, laptop audio)
+  - static/                 the PWA (index.html, app.js, styles.css, manifest, sw.js)
+  - tests/                  logic, win conditions, secret leaks, turn timing, hand-off
+  - light_switch.py         (existing) servo driver; light.py builds on it
+- esp32-robot/              PlatformIO firmware: eyes, smile, photoresistor, Wi-Fi
+- music/                    instrumental tracks + tracks.json
+- systemd/                  botfia.service (+ bluetooth) for autostart
 
-## Build phases — DO ONE AT A TIME. EACH PHASE ENDS WITH A TEST I RUN.
+## Core code rules
 
-1. Light switch on the Pi (SG90 on GPIO 18, hardware PWM). **DONE.** A Python module (`pi/light_switch.py`) flips the wall switch via sysfs hardware PWM; ON/OFF/REST angles save to `pi/light_config.json` and survive reboot. Calibration web page (`pi/light_calibrate.py`) with live sliders. REST is the flat/center position; each flip glides out to one side and straight back to flat so the arm never sweeps across and double-triggers. Verified flipping the real light 10+ times in a row.
-   - Hardware PWM: `/boot/firmware/config.txt` has `dtoverlay=pwm-2chan,pin=18,func=2,pin2=19,func2=2` → GPIO 18 = `pwmchip0` channel 2. Pulse range 400-2600us.
-   - Power: the servo runs off the Pi's 5V (power bank). The power bank is marginal and occasionally brown-out-reboots the Pi on servo spikes. For long sessions, power the servo from a separate 5V source (shared ground). The code relaxes the servo at REST to minimize current.
-2. Game engine + phone web app on the Pi, no hardware. **BUILT — ready for your test.** `pi/game/engine.py` is the plain-code state machine (lobby -> reveal -> night -> day -> vote -> end); role counts in `pi/game/roles.json`. `pi/app.py` serves the phone UI (`/`) and host console (`/host`) on port 5000; phones poll for state. Secret-safety test in `pi/tests/test_game.py` (public_state never leaks roles/actions). Done when a full game is playable on phones.
-3. Voice, Claude narration, and music.
-4. ESP32 over Wi-Fi: eyes, smile, light sensor, and the full night flow (Pi flips the light off, the ESP32 light sensor confirms dark, retry if not, then eyes on).
-5. Shuffle drum (gear motor with encoder on the ESP32, stops with the opening facing up).
-6. Head turning toward the player being addressed (NEMA 17 on the ESP32 + seat map).
-7. Optional: USB camera reads patterns printed on card backs, so players no longer need to select their role. Decide how the camera connects given the Pi's location at the switch.
+- Game logic is plain code, never Claude. A state machine decides everything.
+- Never leak secrets to narration; prove it with tests.
+- The game keeps working if Claude/API/internet fails (fallback lines), if the
+  ESP32 is offline (no eyes), or if the speaker is absent (text on screen).
+- Keep it light for 1GB RAM.
+- `.env` and Wi-Fi secrets are gitignored and never committed.
+
+## Deliverables when the software is done
+
+1. WIRING.md: exact ESP32 wiring (each eye LED, the 2 smile LEDs, the
+   photoresistor, resistors, exact pins), how to power it. Plain words, step by
+   step, for a first-timer.
+2. Speaker pairing steps.
+3. Setup checklist: API key, Wi-Fi, music import, voice choice, light calibration.
+4. Game-night checklist: what to do, in order, to start a game.
 
 ## How to work with me
 
-- I'm learning. Explain wiring in plain words, and tell me exactly what to plug where BEFORE writing code that depends on it.
-- Do not skip ahead to later phases.
-- Keep code simple, organized, and plainly commented.
-- Do not add features that are not in this file without asking me first.
-- Keep the pin map and phase status in this file up to date.
+- I'm learning. Explain wiring in plain words before any code that depends on it.
+- Keep code simple, organized, plainly commented.
+- Don't add parts or features not in this file without asking.
+- Keep the pin map, the HTTP contract, and this file up to date.
