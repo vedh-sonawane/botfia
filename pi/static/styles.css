@@ -37,6 +37,8 @@ body.night {
   --ring:    rgba(150,60,55,0.8);
 }
 body.night { filter: brightness(0.82); }
+body.night .dot { opacity: 0.4; }
+body.night .dot.ok { background: #3a5a40; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; }
@@ -75,9 +77,10 @@ body {
 .dot.off { background: var(--danger); }
 
 /* screen container + transitions */
-.screen { flex: 1; display: flex; flex-direction: column; justify-content: center;
+.screen { flex: 1; display: flex; flex-direction: column; justify-content: flex-start;
   padding: 8px 0 20px; }
-.view { animation: rise var(--speed) var(--ease) both; }
+.view { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column;
+  animation: rise var(--speed) var(--ease) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -174,7 +177,8 @@ body {
 .seg { display: flex; gap: 8px; }
 .seg button { flex: 1; min-height: 48px; border: 1px solid var(--line); background: var(--surface);
   color: var(--muted); border-radius: 14px; font-size: 15px; cursor: pointer; }
-.seg button[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: var(--surface-2); }
+.seg button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent);
+  background: var(--surface-2); font-weight: 600; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 16px 0; }
 .row .lab { font-size: 15px; }
 .row .hint { color: var(--muted); font-size: 13px; }

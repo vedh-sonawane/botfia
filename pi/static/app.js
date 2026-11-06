@@ -12,7 +12,7 @@ function h(tag, props = {}, children = []) {
     if (k === 'class') e.className = props[k];
     else if (k === 'html') e.innerHTML = props[k];
     else if (k.startsWith('on')) e.addEventListener(k.slice(2).toLowerCase(), props[k]);
-    else if (props[k] === true) e.setAttribute(k, '');
+    else if (props[k] === true) e.setAttribute(k, k.startsWith('aria-') ? 'true' : '');
     else if (props[k] !== false && props[k] != null) e.setAttribute(k, props[k]);
   }
   for (const c of [].concat(children)) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
@@ -153,9 +153,9 @@ function lobby(s) {
 
   // options
   const voteSeg = h('div', { class: 'seg' }, ['secret', 'open'].map((v) =>
-    h('button', { 'aria-pressed': opts.voting_style === v, onclick: (e) => { opts.voting_style = v; voteSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', ['secret', 'open'][k] === v)); } }, v[0].toUpperCase() + v.slice(1))));
+    h('button', { 'aria-pressed': opts.voting_style === v ? 'true' : 'false', onclick: () => { opts.voting_style = v; voteSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', ['secret', 'open'][k] === v ? 'true' : 'false')); } }, v[0].toUpperCase() + v.slice(1))));
   const timeSeg = h('div', { class: 'seg' }, [[120, '2m'], [180, '3m'], [300, '5m']].map(([v, t]) =>
-    h('button', { 'aria-pressed': opts.discussion_seconds === v, onclick: () => { opts.discussion_seconds = v; timeSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', [120, 180, 300][k] === v)); } }, t)));
+    h('button', { 'aria-pressed': opts.discussion_seconds === v ? 'true' : 'false', onclick: () => { opts.discussion_seconds = v; timeSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', [120, 180, 300][k] === v ? 'true' : 'false')); } }, t)));
 
   const start = h('button', { class: 'btn primary', style: 'margin-top:12px', onclick: async () => {
     const clean = names.map((n) => n.trim()).filter(Boolean);
@@ -176,10 +176,12 @@ function lobby(s) {
 function handoff(d) {
   const ring = holdRing('hold to begin', async () => { await post('/api/begin_turn'); }, 620);
   return h('div', { class: 'center' }, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker' }, 'Pass the device'),
     h('h1', { class: 'display serif', style: 'margin-bottom:6px' }, d.next_name),
     h('div', { class: 'hold-wrap' }, ring),
     h('p', { class: 'hidden-note' }, 'Only ' + d.next_name + ' should look.'),
+    h('div', { class: 'spacer' }),
   ]);
 }
 
@@ -198,6 +200,7 @@ function reveal(d) {
   });
   const done = timedDone('Done', () => post('/api/finish_turn'), d.min_turn_seconds);
   return h('div', {}, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker center' }, 'Your role'),
     card,
     h('p', { class: 'hidden-note center' }, 'Let go to hide it.'),
@@ -207,6 +210,7 @@ function reveal(d) {
 
 function readyNight() {
   return h('div', { class: 'center' }, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker' }, 'Ready'),
     h('h1', { class: 'display serif' }, 'Everyone has their role.'),
     h('p', { class: 'sub' }, 'Place the device down. The night is about to begin.'),
@@ -236,6 +240,7 @@ function nightTurn(d) {
 // --- morning ---
 function morning(d) {
   return h('div', { class: 'center' }, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker' }, 'Morning'),
     h('h1', { class: 'display serif' }, d.line || (d.died ? d.died + ' did not wake up.' : 'Everyone is still here.')),
     h('div', { class: 'spacer' }),
@@ -264,6 +269,7 @@ function discussion(d, s) {
   }, 1000);
   discussion._ctl = dayTimer;
   return h('div', {}, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker center' }, 'Day ' + s.day_number + ' — ' + s.alive_count + ' left'),
     h('div', { class: 'count' }, [timeEl, h('div', { class: 'bar-track' }, fillEl)]),
     h('p', { class: 'sub center' }, 'Talk it over. Decide who to vote out.'),
@@ -273,6 +279,7 @@ function discussion(d, s) {
 
 function postVote(d) {
   return h('div', { class: 'center' }, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker' }, 'The vote'),
     h('h1', { class: 'display serif' }, d.line || 'The vote is in.'),
     h('div', { class: 'spacer' }),
@@ -315,9 +322,11 @@ function endScreen(d) {
     h('div', { class: 'reveal-row', style: 'animation-delay:' + (i * 0.05).toFixed(3) + 's' },
       [h('span', {}, p.name), h('span', { class: 'r' }, p.role)])));
   return h('div', {}, [
+    h('div', { class: 'spacer' }),
     h('p', { class: 'kicker center' }, 'Game over'),
     h('h1', { class: 'result serif center' }, d.winner === 'mafia' ? 'The mafia wins.' : 'The town wins.'),
     list,
+    h('div', { class: 'spacer' }),
     h('button', { class: 'btn primary', onclick: () => { lobby._names = null; lobby._opts = null; post('/api/restart'); } }, 'New game'),
   ]);
 }
@@ -331,7 +340,7 @@ function optionList(options, onPick, d) {
     if (preselected) selected = o.seat;
     const row = h('button', { class: 'option' + (disabled ? ' disabled' : ''),
       style: 'animation-delay:' + (i * 0.035).toFixed(3) + 's',
-      'aria-selected': preselected, onclick: () => {
+      'aria-selected': preselected ? 'true' : 'false', onclick: () => {
         el.querySelectorAll('.option').forEach((x) => x.setAttribute('aria-selected', 'false'));
         row.setAttribute('aria-selected', 'true'); haptic(10);
         selected = o.seat; onPick && onPick(o.seat);

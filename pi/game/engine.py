@@ -28,10 +28,10 @@ ROLES_PATH = Path(__file__).with_name("roles.json")
 PHASES = ("setup", "reveal", "night", "morning", "day", "vote", "end")
 
 ROLE_BLURB = {
-    "mafia": "Mafia. Each night, choose someone to remove.",
-    "doctor": "Doctor. Each night, choose someone to protect.",
-    "detective": "Detective. Each night, check one person.",
-    "villager": "Villager. You have no night action. Find the mafia by day.",
+    "mafia": "Each night, choose someone to remove.",
+    "doctor": "Each night, choose someone to protect.",
+    "detective": "Each night, check one person. You learn if they are mafia.",
+    "villager": "No night action. Find the mafia by day.",
 }
 
 

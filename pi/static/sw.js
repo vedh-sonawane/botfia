@@ -1,6 +1,6 @@
 /* Botfia service worker — caches the app shell so it loads instantly and can be
    installed. The game API is always fetched from the network. */
-const CACHE = 'botfia-v2';
+const CACHE = 'botfia-v3';
 const SHELL = ['/', '/styles.css', '/app.js', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (e) => {
