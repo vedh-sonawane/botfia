@@ -26,7 +26,9 @@ async function get(path) { const r = await fetch(path, { cache: 'no-store' }); r
 async function post(path, body) {
   const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : null });
-  return r.json();
+  const json = await r.json();
+  setTimeout(() => loop(), 50);   // refresh the screen right after any action
+  return json;
 }
 
 // ---------- device niceties ----------
@@ -55,7 +57,7 @@ function holdRing(label, onComplete, holdMs = 650) {
     if (!start) start = t;
     const p = Math.min(1, (t - start) / holdMs);
     fill.style.strokeDashoffset = circ * (1 - p);
-    if (p >= 1 && !done) { done = true; haptic(24); onComplete(); return; }
+    if (p >= 1 && !done) { done = true; haptic(24); wrap.classList.remove('active'); wrap.classList.add('done'); onComplete(); return; }
     raf = requestAnimationFrame(step);
   };
   const begin = (ev) => { ev.preventDefault(); if (done) return; wrap.classList.add('active'); haptic(8); start = 0; raf = requestAnimationFrame(step); };
@@ -309,8 +311,9 @@ function voteOpen(d) {
 
 // --- end ---
 function endScreen(d) {
-  const list = h('div', { class: 'reveal-list' }, (d.reveal || []).map((p) =>
-    h('div', { class: 'reveal-row' }, [h('span', {}, p.name), h('span', { class: 'r' }, p.role)])));
+  const list = h('div', { class: 'reveal-list' }, (d.reveal || []).map((p, i) =>
+    h('div', { class: 'reveal-row', style: 'animation-delay:' + (i * 0.05).toFixed(3) + 's' },
+      [h('span', {}, p.name), h('span', { class: 'r' }, p.role)])));
   return h('div', {}, [
     h('p', { class: 'kicker center' }, 'Game over'),
     h('h1', { class: 'result serif center' }, d.winner === 'mafia' ? 'The mafia wins.' : 'The town wins.'),
@@ -322,11 +325,12 @@ function endScreen(d) {
 // ---------- shared pieces ----------
 function optionList(options, onPick, d) {
   const el = h('div', { class: 'options' });
-  (options || []).forEach((o) => {
+  (options || []).forEach((o, i) => {
     const disabled = (d && d.blocked_seat === o.seat);
     const preselected = (d && d.current_pick === o.seat);
     if (preselected) selected = o.seat;
     const row = h('button', { class: 'option' + (disabled ? ' disabled' : ''),
+      style: 'animation-delay:' + (i * 0.035).toFixed(3) + 's',
       'aria-selected': preselected, onclick: () => {
         el.querySelectorAll('.option').forEach((x) => x.setAttribute('aria-selected', 'false'));
         row.setAttribute('aria-selected', 'true'); haptic(10);
@@ -398,17 +402,29 @@ async function openHostSheet() {
 }
 function hbtn(label, fn) { return h('button', { class: 'btn', onclick: () => { fn(); } }, label); }
 
+// ---------- splash + reconnect ----------
+function splash() {
+  screenEl().innerHTML = '';
+  screenEl().append(h('div', { class: 'splash' }, h('div', { class: 'mark' }, 'BOTFIA')));
+}
+function setReconnect(on) {
+  const o = document.getElementById('reconnect');
+  if (on && !o) document.body.append(h('div', { id: 'reconnect', class: 'reconnect' }, h('div', { class: 'r' }, 'Reconnecting')));
+  else if (!on && o) o.remove();
+}
+
 // ---------- poll loop ----------
-let fails = 0;
+let fails = 0, first = true;
 async function loop() {
   try {
     const [d, s] = await Promise.all([get('/api/device'), get('/api/state')]);
-    fails = 0; render(d, s);
+    fails = 0; setReconnect(false); first = false; render(d, s);
   } catch (e) {
     fails++; $('#status-dot').className = 'dot off';
-    if (fails === 3) toast('Reconnecting…');
+    if (fails >= 3 && !first) setReconnect(true);
   }
 }
+splash();
 loop();
 setInterval(loop, 900);
 

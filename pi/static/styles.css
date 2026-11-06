@@ -209,3 +209,49 @@ body {
 
 .spacer { flex: 1; }
 .muted { color: var(--muted); }
+
+/* ------------------------------------------------------------------ polish */
+
+/* cinematic vignette — a faint darkening of the edges for depth */
+body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(135% 115% at 50% -5%, transparent 52%, rgba(0,0,0,0.5));
+}
+.app { position: relative; z-index: 2; }   /* lift content above the vignette */
+
+/* loading splash — a quiet breathing wordmark until the first state arrives */
+.splash { height: 100dvh; display: grid; place-items: center; animation: fade .6s both; }
+.splash .mark { font-family: Georgia, serif; letter-spacing: .42em; font-size: 17px;
+  color: var(--muted); animation: breathe 3.6s var(--ease) infinite; }
+@keyframes breathe { 0%,100% { opacity: .42; } 50% { opacity: .95; } }
+
+/* reconnecting overlay — calm, never alarming */
+.reconnect { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  background: rgba(8,8,10,0.84); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  animation: fade .3s both; }
+.reconnect .r { font-family: Georgia, serif; color: var(--muted); letter-spacing: .06em; font-size: 16px; }
+
+/* staggered entrances for lists */
+.options .option { animation: rise .5s var(--ease) both; }
+.reveal-list .reveal-row { animation: rise .45s var(--ease) both; }
+
+/* the role, revealed */
+.role-name { animation: reveal-in .45s var(--ease) both; }
+.role-blurb { animation: fade .5s .08s both; }
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* press-and-hold ring — grows and glows as it fills, settles with a pulse */
+.hold { transition: transform .25s var(--ease), border-color .25s, box-shadow .25s; }
+.hold.active { transform: scale(1.035); border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring), 0 0 44px -12px var(--ring); }
+.hold.done { animation: pulse .55s var(--ease); }
+@keyframes pulse { 0% { transform: scale(1.035); } 42% { transform: scale(1.085); } 100% { transform: scale(1); } }
+
+/* the faint hairline that makes the accent buttons feel physical */
+.btn.primary { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
+
+/* fixed height so the role card doesn't resize when held vs released */
+.role-card { min-height: 232px; display: grid; place-items: center; }
