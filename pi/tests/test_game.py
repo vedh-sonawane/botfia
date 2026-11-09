@@ -130,7 +130,7 @@ def test_device_shows_only_current_actor():
     def check(engine):
         ds = engine.device_state()
         if ds.get("screen") == "night":
-            # options are names only — no roles leak about other players
+            # options are names only, no roles leak about other players
             for o in ds.get("options", []):
                 assert set(o.keys()) == {"seat", "name"}, o
             # the only role-ish field is this player's own action kind

@@ -1,4 +1,4 @@
-// Botfia table unit — ESP32-WROOM-32.
+// Botfia table unit, ESP32-WROOM-32.
 //
 // Sits on the table and drives the robot's face: two red eye LEDs and the smile
 // LEDs, all on LEDC PWM so they fade smoothly. A photoresistor on ADC1 lets the

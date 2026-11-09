@@ -1,4 +1,4 @@
-"""Motors — intentionally empty.
+"""Motors, intentionally empty.
 
 Botfia v1 does not use any motors. The shuffle drum and head turning are a
 possible later phase. This is the clean hook for them: build the gear motor

@@ -20,7 +20,7 @@ _BANK = {
     # Start of the game. ctx: {player_count}
     "game_start": [
         "There are {player_count} of you in the little town at the edge of the woods tonight, and some of them are lying. By morning you will start finding out who.",
-        "{player_count} gather by lamplight, all easy smiles — but not everyone here means the others well. The story starts now.",
+        "{player_count} gather by lamplight, all easy smiles, but not everyone here means the others well. The story starts now.",
     ],
     # Private role reveal, passed around the circle. ctx: {} (short instruction)
     "role_reveal": [
@@ -46,18 +46,18 @@ _BANK = {
     ],
     # Morning when no one died. ctx: {}
     "morning_safe": [
-        "There were footsteps on the stairs last night, and a door that thought better of opening. But the sun came up on a full table — someone lost their nerve.",
+        "There were footsteps on the stairs last night, and a door that thought better of opening. But the sun came up on a full table, someone lost their nerve.",
         "The town held its breath through every dark hour. Morning came, and somehow no one was missing.",
     ],
     # Start of the day discussion. ctx: {alive_count}
     "day_start": [
-        "The bell pulls {alive_count} of you into the square, uneasy in the daylight. Talk it out — and watch whose eyes do not quite meet yours.",
+        "The bell pulls {alive_count} of you into the square, uneasy in the daylight. Talk it out, and watch whose eyes do not quite meet yours.",
         "{alive_count} remain to sort friend from killer. Make your case, before someone makes one about you.",
     ],
     # Discussion time is up; move to the vote. ctx: {}
     "discussion_end": [
         "The arguing dies down and the square goes still. It is time to choose, and someone is not walking home.",
-        "The talking is done. Now the town has to decide — and live with it.",
+        "The talking is done. Now the town has to decide, and live with it.",
     ],
     # Someone was voted out. ctx: {name}
     "vote_out": [
@@ -67,11 +67,11 @@ _BANK = {
     # The vote tied. ctx: {}
     "vote_tie": [
         "The vote split clean down the middle, and no one could break it. Whoever should have gone tonight lives to see another dawn.",
-        "The vote came back even. The gate stays shut, and everyone stays — for now.",
+        "The vote came back even. The gate stays shut, and everyone stays, for now.",
     ],
     # No one was voted out. ctx: {}
     "vote_none": [
-        "The town looked from face to face and could not point at anyone. Everyone goes home tonight — including whoever should not.",
+        "The town looked from face to face and could not point at anyone. Everyone goes home tonight, including whoever should not.",
         "Nobody. The town chose to trust its own, and the night will decide whether that was brave or foolish.",
     ],
     # Town victory. ctx: {}
@@ -87,13 +87,13 @@ _BANK = {
     # Jester victory. ctx: {name}
     "jester_win": [
         "{name} went to the gate smiling, and only now do you understand why. They wanted the vote, played all of you, and walked away the winner.",
-        "The town was so sure about {name} — and that was the whole idea. The jester got exactly what they came for.",
+        "The town was so sure about {name}, and that was the whole idea. The jester got exactly what they came for.",
     ],
     # End-of-game role reveal, when every role is already public. ctx: {name, role} (short)
     "reveal_role": [
         "{name} was the {role}.",
         "Turns out {name} was the {role} all along.",
-        "{name} — the {role}.",
+        "{name}, the {role}.",
         "And {name}? The {role}.",
     ],
 }

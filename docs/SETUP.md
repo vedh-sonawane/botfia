@@ -13,7 +13,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 `.env` is gitignored and never committed. If this key is missing or the internet is
-down, Botfia still runs — it falls back to prewritten narration lines.
+down, Botfia still runs, it falls back to prewritten narration lines.
 
 ## 2. Wi-Fi
 

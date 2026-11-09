@@ -1,6 +1,6 @@
 # Pairing the Sony speaker to the Pi
 
-All of Botfia's audio — narration and music — plays through the Sony Bluetooth
+All of Botfia's audio, narration and music, plays through the Sony Bluetooth
 speaker. The Pi 5 has no headphone jack, so this pairing is required. You do this
 once; after that the speaker reconnects on its own.
 

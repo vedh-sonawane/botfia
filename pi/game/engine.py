@@ -1,4 +1,4 @@
-"""Botfia game engine — pass-and-play Mafia on one shared device.
+"""Botfia game engine, pass-and-play Mafia on one shared device.
 
 This is PLAIN CODE. It decides every outcome. Claude is never involved here; the
 only thing the engine asks an outside narrator for is a public line of text, and
@@ -8,7 +8,7 @@ Two views:
   - public_state(): safe for the host screen and general UI. NEVER contains roles
     or secret actions while the game is in progress.
   - device_state(): the one screen the shared device should show right now. During
-    a private turn it contains ONLY the current player's own role/action — never
+    a private turn it contains ONLY the current player's own role/action, never
     anyone else's. Physical privacy (press-and-hold, hand-off) is enforced by the
     client; the engine makes sure the data for a turn belongs to that turn only.
 
@@ -218,8 +218,7 @@ class GameEngine:
         self._emit("night_start", day_number=self.day_number)
 
     def submit_night(self, target_seat):
-        """Record the current player's action. Does not advance the turn —
-        a player may change their pick, and the detective must view the result."""
+        """Record the current player's action. Does not advance the turn, a player may change their pick, and the detective must view the result."""
         if self.phase != "night" or self._stage != "active":
             return
         cur = self._current()
@@ -234,7 +233,7 @@ class GameEngine:
                 self._doctor_protect = target.seat
         elif cur.role == "detective":
             if target and target.alive:
-                # Red if the target reads as a threat — mafia OR jester. The
+                # Red if the target reads as a threat, mafia OR jester. The
                 # detective sees only a colour, so a red is not proof of mafia
                 # (it could be the jester), and green is not proof of innocence.
                 self._detective_results[cur.seat] = {
@@ -451,7 +450,7 @@ class GameEngine:
             return {"screen": "handoff", "phase": p, "next_name": cur.name,
                     "night": p == "night"}
 
-        # active turn — only this player's own data
+        # active turn, only this player's own data
         if p == "reveal":
             d = {"screen": "reveal", "name": cur.name, "role": cur.role,
                  "blurb": ROLE_BLURB.get(cur.role, ""),

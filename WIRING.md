@@ -22,7 +22,7 @@ Follow the steps in order. Take your time. If something does not light up, the
 
 All of these are already in the kit. You do not need anything else.
 
-## LED basics — read this first
+## LED basics, read this first
 
 An LED only works one way round. Look at the two legs:
 
@@ -35,7 +35,7 @@ Two rules, every time:
 - Current flows in the long leg and out the short leg. Long leg toward the ESP32
   pin, short leg toward ground.
 - Every LED gets its own 220 ohm resistor in series. Never connect an LED straight
-  to a pin with no resistor — without the resistor the LED draws too much current
+  to a pin with no resistor, without the resistor the LED draws too much current
   and can burn out the pin or the LED.
 
 The resistor can go on either leg; it just has to be in the line between the pin
@@ -61,7 +61,7 @@ in the steps below connects to this one rail. Get this wire in first.
 
 ## Step by step
 
-### Left eye LED — GPIO 25
+### Left eye LED, GPIO 25
 
 1. Put the LED on the breadboard so its two legs are in different rows.
 2. Put a 220 ohm resistor from the LED's long leg (+) across to an empty row.
@@ -70,7 +70,7 @@ in the steps below connects to this one rail. Get this wire in first.
 
 Path: GPIO 25 -> 220 ohm -> LED long leg -> LED short leg -> GND rail.
 
-### Right eye LED — GPIO 26
+### Right eye LED, GPIO 26
 
 Same as the left eye, on GPIO 26.
 
@@ -81,7 +81,7 @@ Same as the left eye, on GPIO 26.
 
 Path: GPIO 26 -> 220 ohm -> LED long leg -> LED short leg -> GND rail.
 
-### Smile — two LEDs, both on GPIO 27 (in parallel)
+### Smile, two LEDs, both on GPIO 27 (in parallel)
 
 The two smile LEDs turn on and off together, so they share one pin. But each LED
 still needs its own 220 ohm resistor and its own wire to ground. Do not try to make two LEDs share a single resistor.
@@ -91,7 +91,7 @@ For each of the two smile LEDs:
 1. Put the LED on the breadboard.
 2. 220 ohm resistor from its long leg (+) to an empty row.
 3. Jumper from GPIO 27 to that resistor row. (Both smile LEDs' resistor rows connect
-   back to GPIO 27 — that is what "in parallel" means here.)
+   back to GPIO 27, that is what "in parallel" means here.)
 4. Jumper from the LED's short leg (-) to the ground rail.
 
 Path (each LED): GPIO 27 -> 220 ohm -> LED long leg -> LED short leg -> GND rail.
@@ -99,12 +99,12 @@ Path (each LED): GPIO 27 -> 220 ohm -> LED long leg -> LED short leg -> GND rail
 So GPIO 27 fans out to two 220 ohm resistors, one per smile LED, and both LEDs
 return to the ground rail.
 
-### Photoresistor (light sensor) — GPIO 34
+### Photoresistor (light sensor), GPIO 34
 
 The photoresistor changes its resistance with light. We put it in a voltage divider
 with the 10k resistor so the ESP32 can read a changing voltage on GPIO 34.
 
-A photoresistor has no plus or minus — either leg can go either way.
+A photoresistor has no plus or minus, either leg can go either way.
 
 1. Run a jumper from the ESP32 3V3 pin to one leg of the photoresistor.
 2. The other leg of the photoresistor goes to a junction row. Call this the junction.
@@ -156,7 +156,7 @@ lands on the one ground rail that connects back to the ESP32 GND pin.
 5. Both together: `POST /face/on` fades eyes and smile on; `POST /face/off` fades
    them off.
 6. Light sensor: open `GET /light` and read the `raw` number. Cover the photoresistor
-   with your hand — `raw` should drop and `dark` should flip to true. Uncover it and
+   with your hand, `raw` should drop and `dark` should flip to true. Uncover it and
    `raw` should climb back up.
 
 If an LED does not light, check its direction first (long leg toward the resistor and

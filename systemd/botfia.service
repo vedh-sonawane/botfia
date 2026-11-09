@@ -7,7 +7,7 @@
 # SDL_AUDIODRIVER=pipewire makes ffplay (music) route there too. Both assume UID 1000.
 
 [Unit]
-Description=Botfia — Mafia host
+Description=Botfia, Mafia host
 After=network-online.target sound.target bluetooth.target
 Wants=network-online.target
 

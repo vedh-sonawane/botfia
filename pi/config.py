@@ -1,7 +1,7 @@
 """Central Botfia configuration.
 
 Defaults live here; a saved overlay (botfia_config.json) and a few env vars can
-override them. Secrets (the Anthropic API key, Wi-Fi) are NOT here — they live in
+override them. Secrets (the Anthropic API key, Wi-Fi) are NOT here, they live in
 .env and the Wi-Fi secrets file and are never committed.
 """
 

@@ -50,10 +50,10 @@ These match the style rules: a quiet, dry, serious narrator. Run:
 
 and keep the one that sounds calmest to you:
 
-  - en_US-ryan-medium   — measured US male, even and unhurried.
-  - en_GB-alba-medium   — soft Scottish English female, understated.
-  - en_US-lessac-medium — neutral US female, clear and flat.
-  - en_GB-northern_english_male-medium — low, dry UK male.
+  - en_US-ryan-medium, measured US male, even and unhurried.
+  - en_GB-alba-medium, soft Scottish English female, understated.
+  - en_US-lessac-medium, neutral US female, clear and flat.
+  - en_GB-northern_english_male-medium, low, dry UK male.
 
 The audition downloads any it is missing into pi/audio/voices/ and speaks the
 same sample line through each. Set the winner as BOTFIA_PIPER_VOICE.

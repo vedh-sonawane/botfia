@@ -1,4 +1,4 @@
-"""BotfiaSession — ties the pure game engine to the real world.
+"""BotfiaSession, ties the pure game engine to the real world.
 
 The engine decides everything; this layer makes the lights, eyes, voice, and
 music follow along, always in background threads so the web app never blocks and
@@ -199,11 +199,11 @@ class BotfiaSession:
             time.sleep(0.4)
             d = self.esp32.is_dark()
             if d is None:
-                return None          # ESP32 offline — continue without the check
+                return None          # ESP32 offline, continue without the check
             if d is True:
                 return True
             if attempt < retries:
-                self.light.off()     # still bright — flip again
+                self.light.off()     # still bright, flip again
         return False
 
     # ------------------------------------------------------- health

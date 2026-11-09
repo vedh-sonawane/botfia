@@ -1,4 +1,4 @@
-"""Botfia web server — the shared-device app + host console.
+"""Botfia web server, the shared-device app + host console.
 
 Run on the Pi:   python -m pi.app     (port 80; systemd runs this on boot)
 Open on the shared device:  http://botfia.local   (or the Pi's IP)
@@ -6,7 +6,7 @@ Open on the shared device:  http://botfia.local   (or the Pi's IP)
 `build_app(session)` registers the JSON API + serves the PWA against a session, so
 the laptop simulation (pi/sim) can reuse the exact same routes with mock hardware.
 On a laptop with no hardware the real classes degrade gracefully, so this runs
-there too — just without the eyes and (unless Piper is installed) the voice.
+there too, just without the eyes and (unless Piper is installed) the voice.
 """
 
 import os
@@ -31,7 +31,7 @@ def build_app(session):
 
     def _ok(ok=True):
         # Return the new screen with the action result so the client can render
-        # instantly — no second round-trip to fetch the next screen.
+        # instantly, no second round-trip to fetch the next screen.
         return jsonify(ok=ok, device=session.device_state(),
                        state=session.public_state())
 

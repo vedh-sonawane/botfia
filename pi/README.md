@@ -1,4 +1,4 @@
-# Botfia — Pi
+# Botfia, Pi
 
 The Raspberry Pi 5 is the brain and sits at the wall switch, powered by a 5V power
 bank. Phase 1 is here: the light switch, driven by the SG90 on the Pi's GPIO.
@@ -7,9 +7,9 @@ bank. Phase 1 is here: the light switch, driven by the SG90 on the Pi's GPIO.
 
 | SG90 wire        | Pi pin                    |
 |------------------|---------------------------|
-| signal (orange)  | GPIO 18 — physical pin 12 |
-| power (red)      | 5V — physical pin 2       |
-| ground (brown)   | GND — physical pin 6      |
+| signal (orange)  | GPIO 18, physical pin 12 |
+| power (red)      | 5V, physical pin 2       |
+| ground (brown)   | GND, physical pin 6      |
 
 The switch is a slide dimmer; only its bottom on/off rocker is used. The arm
 presses the top of the rocker for ON, the bottom for OFF, then returns to REST so
@@ -24,12 +24,12 @@ the switch still works by hand.
    ```
 
    (`func=2` is the value the overlay uses to map GPIO 18 to `PWM0_CHAN2` on the
-   Pi 5 — confirmed with `dtoverlay -h pwm-2chan`.)
+   Pi 5, confirmed with `dtoverlay -h pwm-2chan`.)
 
 2. Reboot the Pi. After boot, `pinctrl get 18` should show `PWM0_CHAN2`, and
    `/sys/class/pwm/pwmchip0` should exist.
 
-GPIO 18 shows up as `pwmchip0`, channel 2 — already set in `light_switch.py` as
+GPIO 18 shows up as `pwmchip0`, channel 2, already set in `light_switch.py` as
 `PWM_CHIP` / `PWM_CHANNEL`. No Python PWM library is needed; the servo is driven
 straight through sysfs. The `milo` user can drive it without root because it is in
 the `gpio` group (a udev rule hands the exported channel to that group).
@@ -54,9 +54,9 @@ sliders to move the arm live, set ON / OFF / REST, then Save. Angles are written
 to `light_config.json` and survive a reboot.
 
 Set the angles so:
-- **REST** — arm clear of the switch, nothing pressed.
-- **ON** — arm pressed against the top of the bottom rocker.
-- **OFF** — arm pressed against the bottom of the rocker.
+- **REST**, arm clear of the switch, nothing pressed.
+- **ON**, arm pressed against the top of the bottom rocker.
+- **OFF**, arm pressed against the bottom of the rocker.
 
 Leave a few degrees of margin from the 0°/180° hard stops so the servo isn't
 grinding against its own end stop while holding.
@@ -75,5 +75,5 @@ python light_switch.py test 20   # flip the light 20 times in a row (Phase 1 tes
 
 ## Note
 
-Off the Pi (e.g. a laptop), the code runs in SIMULATION mode — it logs moves
+Off the Pi (e.g. a laptop), the code runs in SIMULATION mode, it logs moves
 instead of driving a servo, so you can develop the UI without hardware.

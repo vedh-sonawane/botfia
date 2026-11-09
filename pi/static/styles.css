@@ -1,4 +1,4 @@
-/* Botfia — dark, minimal, premium. One tight palette, generous spacing,
+/* Botfia, dark, minimal, premium. One tight palette, generous spacing,
    deliberate motion. A near-black night theme lights only the holder. */
 
 :root {
@@ -225,7 +225,7 @@ body {
 .chip { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--line);
   color: var(--muted); background: var(--surface-2); animation: rise var(--speed) var(--ease) both; }
 
-/* detective verdict — a colour, not a label. red = mafia OR jester; green = clear */
+/* detective verdict, a colour, not a label. red = mafia OR jester; green = clear */
 .verdict { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .verdict-dot { width: 76px; height: 76px; border-radius: 50%; }
 .verdict.green .verdict-dot { background: #4e8d5b; box-shadow: 0 0 40px rgba(78,141,91,0.45); }
@@ -246,20 +246,20 @@ body {
 
 /* ------------------------------------------------------------------ polish */
 
-/* cinematic vignette — a faint darkening of the edges for depth */
+/* cinematic vignette, a faint darkening of the edges for depth */
 body::after {
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
   background: radial-gradient(135% 115% at 50% -5%, transparent 52%, rgba(0,0,0,0.5));
 }
 .app { position: relative; z-index: 2; }   /* lift content above the vignette */
 
-/* loading splash — a quiet breathing wordmark until the first state arrives */
+/* loading splash, a quiet breathing wordmark until the first state arrives */
 .splash { height: 100dvh; display: grid; place-items: center; animation: fade .6s both; }
 .splash .mark { font-family: Georgia, serif; letter-spacing: .42em; font-size: 17px;
   color: var(--muted); animation: breathe 3.6s var(--ease) infinite; }
 @keyframes breathe { 0%,100% { opacity: .42; } 50% { opacity: .95; } }
 
-/* reconnecting overlay — calm, never alarming */
+/* reconnecting overlay, calm, never alarming */
 .reconnect { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
   background: rgba(8,8,10,0.84); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   animation: fade .3s both; }
@@ -277,7 +277,7 @@ body::after {
   to   { opacity: 1; transform: none; }
 }
 
-/* press-and-hold ring — grows and glows as it fills, settles with a pulse */
+/* press-and-hold ring, grows and glows as it fills, settles with a pulse */
 .hold { transition: transform .25s var(--ease), border-color .25s, box-shadow .25s; }
 .hold.active { transform: scale(1.035); border-color: var(--ring);
   box-shadow: 0 0 0 1px var(--ring), 0 0 44px -12px var(--ring); }

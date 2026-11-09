@@ -14,7 +14,7 @@ from light_switch import LightSwitch
 app = Flask(__name__)
 sw = LightSwitch()
 
-# Minimal dark page. Plain, no decoration — per the style rules.
+# Minimal dark page. Plain, no decoration, per the style rules.
 PAGE = r"""
 <!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">

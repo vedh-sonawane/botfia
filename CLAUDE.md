@@ -3,20 +3,20 @@
 Botfia is a physical robot that hosts the party game Mafia. It sits on the table,
 runs the night and day phases, turns the room's light off and on, lights its eyes
 and smile, and narrates the game out loud. The game is **pass-and-play on one
-shared device** — there are no personal phones, no cameras, and no physical role
+shared device**, there are no personal phones, no cameras, and no physical role
 cards. Botfia assigns roles itself and the device is passed around the circle.
 
-## STYLE RULES — READ FIRST, APPLY TO EVERYTHING
+## STYLE RULES, READ FIRST, APPLY TO EVERYTHING
 
 NOTHING IN THIS PROJECT SHOULD BE CRINGE. Narration, UI, text, music, names, code
 comments, docs. Everything.
 
 - NARRATION IS STORYTELLING: each line is a short SCENE (3-4 sentences), not a
-  status update — set the place, show what happens, let a moment play out. One
+  status update, set the place, show what happens, let a moment play out. One
   consistent world: a small lamplit town at the edge of the woods where people
   vanish in the night. Build atmosphere and quiet menace; invent vivid concrete
   details (an unlatched door, boots in the wet leaves, an empty chair). Deaths
-  carry weight, but keep them eerie and cinematic — never gory, goofy, or cringe.
+  carry weight, but keep them eerie and cinematic, never gory, goofy, or cringe.
 - Use players' names. Make each night read like the next chapter of one tale.
 - NEVER leak secrets: the storyteller only knows PUBLIC facts (who died, who was
   voted out, how many remain) and never hints at roles or how the game decided.
@@ -26,10 +26,9 @@ comments, docs. Everything.
   creaking doors.
 - IF A LINE FEELS TRY-HARD, GENERIC, OR CRINGE, CUT IT.
 
-## UI RULES — NO COMPROMISE
+## UI RULES, NO COMPROMISE
 
-THE UI MUST BE INSANELY WELL MADE, NOT FLASHY. Cinematic, restrained, flawless —
-like the best premium app you've used.
+THE UI MUST BE INSANELY WELL MADE, NOT FLASHY. Cinematic, restrained, flawless, like the best premium app you've used.
 
 - Dark, minimal, premium. Beautiful typography, generous spacing, perfect
   alignment, a tight color palette.
@@ -43,7 +42,7 @@ like the best premium app you've used.
 - Polish every state: loading, error, reconnecting, empty, end of game.
 - Must look perfect at phone, tablet, and laptop sizes.
 
-## How the game works — PASS-AND-PLAY ON ONE SHARED DEVICE
+## How the game works, PASS-AND-PLAY ON ONE SHARED DEVICE
 
 One device (phone, tablet, or laptop on the Pi's Wi-Fi) opens the web app and is
 passed around the circle.
@@ -100,18 +99,18 @@ them by accident): pause, repeat last line, skip, volume, light test, end, resta
 
 - RASPBERRY PI 5 (1GB), mounted at the wall on a 5V power bank. The brain: game
   engine, web app server, Claude API, text-to-speech, music, and the light-switch
-  servo (local, hardware PWM — already working; keep that code). Audio goes to the
+  servo (local, hardware PWM, already working; keep that code). Audio goes to the
   Sony speaker over Bluetooth.
 - ESP32-WROOM-32 on the table, powered by a USB charger. Drives the two red eye
   LEDs, the smile LEDs, and a photoresistor that confirms the room is dark. Talks
   to the Pi over Wi-Fi with auto-reconnect and a heartbeat. THIS BOARD HAS NO 5V
-  PIN — LEDs run from its 3.3V GPIO.
+  PIN, LEDs run from its 3.3V GPIO.
 - SONY SPEAKER: Bluetooth from the Pi; auto-reconnect on boot; status shown on the
   host screen.
 - SHARED DEVICE: any phone/tablet/laptop on the Pi's Wi-Fi opens the web app.
   Make connecting effortless (mDNS `botfia.local`, clear IP fallback, PWA install).
 - NOT USED: Arduino, USB camera, touch pads, personal phones, physical cards, and
-  motors (shuffle drum, head turning). Motors are a possible later phase — leave a
+  motors (shuffle drum, head turning). Motors are a possible later phase, leave a
   clean, empty hook (`pi/hardware/motors.py` stub) and nothing more.
 
 Communication (Pi -> ESP32): HTTP + JSON on the local network. The light-switch
@@ -138,7 +137,7 @@ servo is local to the Pi (direct GPIO), no network.
 - GAME LOGIC IS PLAIN CODE. Claude only writes lines and picks music. Claude never
   decides outcomes.
 - NEVER LEAK SECRETS. Public narration and its prompts only ever get public
-  information — never who is Mafia, who the doctor saved, or detective results.
+  information, never who is Mafia, who the doctor saved, or detective results.
   Automated tests prove secrets never reach the narration layer.
 - No waiting: pre-generate upcoming lines while the game runs (e.g. write both
   possible morning outcomes during the night) so Botfia speaks instantly.
@@ -167,11 +166,11 @@ servo is local to the Pi (direct GPIO), no network.
   timing, hand-off privacy.
 - Run a complete simulated game end to end before declaring done.
 
-## Hardware inventory — ONLY THESE PARTS EXIST
+## Hardware inventory, ONLY THESE PARTS EXIST
 
 - Raspberry Pi 5 1GB (brain, at the wall switch, 5V power bank).
 - ESP32-WROOM-32 dev board (CP2102), on the table, USB-charger powered. NO 5V pin.
-- SG90 servo — the light switch, on the Pi (already wired and calibrated).
+- SG90 servo, the light switch, on the Pi (already wired and calibrated).
 - Elegoo starter-kit parts still in use: 2 red LEDs (eyes), 2 LEDs (smile), 220 ohm
   resistors, photoresistor, 10k resistor, breadboard, jumper wires.
 - Sony Bluetooth speaker.
@@ -183,7 +182,7 @@ belongs to the light switch (on the Pi).
 
 ## Pin map
 
-Raspberry Pi 5 (light switch) — BCM numbering, already wired:
+Raspberry Pi 5 (light switch), BCM numbering, already wired:
 - SG90 signal (orange): GPIO 18 (hardware PWM), physical pin 12
 - SG90 power (red): 5V, physical pin 2
 - SG90 ground (brown): GND, physical pin 6

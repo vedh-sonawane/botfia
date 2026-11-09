@@ -1,6 +1,6 @@
 """HTTP client for the ESP32 table unit (eyes, smile, photoresistor).
 
-Every call has a short timeout and fails quietly — if the board is offline the
+Every call has a short timeout and fails quietly, if the board is offline the
 game continues without the eyes. Uses the stdlib only (no extra dependency).
 Endpoints match the "Pi <-> ESP32 HTTP contract" in CLAUDE.md.
 """
@@ -64,5 +64,5 @@ class ESP32:
 
     # ---- calibration ----
     def calibrate(self, state):
-        """state is "light" or "dark" — store the current room reading."""
+        """state is "light" or "dark", store the current room reading."""
         return self._request("/calibrate", "POST", {"state": state})

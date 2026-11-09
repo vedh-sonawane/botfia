@@ -1,5 +1,5 @@
 flask>=3.0
-anthropic>=0.40    # Claude narration (optional at runtime — falls back if absent)
+anthropic>=0.40    # Claude narration (optional at runtime, falls back if absent)
 
 # Audio (pi/audio/*) adds NO pip packages. It uses system binaries instead, to
 # keep memory low on the 1GB Pi:

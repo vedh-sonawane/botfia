@@ -1,4 +1,4 @@
-/* Botfia — the shared-device client.
+/* Botfia, the shared-device client.
    Polls the Pi for the current screen and renders it. Private turns use
    press-and-hold so a screen only shows while it's held; a neutral hand-off
    sits between players. Night mode dims the screen to near-black. */
@@ -27,13 +27,13 @@ async function post(path, body) {
   const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : null });
   const json = await r.json();
-  // Render straight from the action's response — one round-trip, no waiting on
+  // Render straight from the action's response, one round-trip, no waiting on
   // a second fetch, so the screen changes the instant the Pi replies.
   if (json && json.device && json.state) render(json.device, json.state);
   else setTimeout(() => loop(), 50);
   return json;
 }
-// Fire-and-forget POST with no screen refresh — for the volume slider, so
+// Fire-and-forget POST with no screen refresh, for the volume slider, so
 // dragging it doesn't thrash the UI on every step.
 async function postQuiet(path, body) {
   try {
@@ -304,7 +304,7 @@ function discussion(d, s) {
   const chips = h('div', { class: 'chips' }, alive.map((n) => h('span', { class: 'chip' }, n)));
   return h('div', {}, [
     h('div', { class: 'spacer' }),
-    h('p', { class: 'kicker center' }, 'Day ' + s.day_number + ' — ' + s.alive_count + ' left'),
+    h('p', { class: 'kicker center' }, 'Day ' + s.day_number + ', ' + s.alive_count + ' left'),
     h('div', { class: 'count' }, [timeEl, h('div', { class: 'bar-track' }, fillEl)]),
     h('h2', { class: 'lead serif center', style: 'margin:10px 0 4px' }, d.prompt || 'Talk it out. Who is lying?'),
     h('p', { class: 'sub center' }, d.line || 'Make your case. Accuse, defend, decide.'),
@@ -508,7 +508,7 @@ setInterval(loop, 900);
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(() => {});
   // When a freshly deployed worker takes control, reload once so the new
-  // app.js/styles.css actually load — no manual cache-clearing needed.
+  // app.js/styles.css actually load, no manual cache-clearing needed.
   let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;

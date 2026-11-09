@@ -34,15 +34,15 @@ Get about 7 total so moods do not repeat too often:
 
 Pick any of these. All are free; mind the license notes.
 
-1. **Pixabay Music** — https://pixabay.com/music/
+1. **Pixabay Music**, https://pixabay.com/music/
    - Free for commercial and personal use, no attribution required.
    - Filter by "ambient", "cinematic", or "piano". Good default source.
 
-2. **Free Music Archive (CC0 / Public Domain)** — https://freemusicarchive.org/
+2. **Free Music Archive (CC0 / Public Domain)**, https://freemusicarchive.org/
    - Filter the license to **CC0** to avoid attribution requirements.
    - Search "ambient", "drone", "piano".
 
-3. **Incompetech (Kevin MacLeod)** — https://incompetech.com/music/royalty-free/
+3. **Incompetech (Kevin MacLeod)**, https://incompetech.com/music/royalty-free/
    - Free under **CC-BY**: you MUST credit the artist. If you use these, add a
      short credit line (artist, track, license) to the project README or an end
      screen. Look in the "Calming" and "Dark/Horror-but-quiet" sets, and ignore
@@ -77,4 +77,4 @@ purple-planet (CC-BY, credit required).
 If any track requires credit (e.g. CC-BY from Incompetech), keep a short list
 here:
 
-- (example) "Awkward Meeting" by Kevin MacLeod — CC-BY 4.0 — incompetech.com
+- (example) "Awkward Meeting" by Kevin MacLeod, CC-BY 4.0, incompetech.com

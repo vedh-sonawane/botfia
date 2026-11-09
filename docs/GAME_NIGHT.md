@@ -9,7 +9,7 @@ docs/SETUP.md). Botfia is pass-and-play: one shared device goes around the circl
 2. Plug in the Pi's power bank. Everything starts on boot, so just wait until the
    host screen is ready.
 3. Power the ESP32 table unit from its USB charger. (If it never comes online, the
-   game still runs — just without the eyes.)
+   game still runs, just without the eyes.)
 4. Have the shared device ready. Any phone, tablet, or laptop works.
 
 ## Open the app
@@ -21,7 +21,7 @@ docs/SETUP.md). Botfia is pass-and-play: one shared device goes around the circl
 
 ## Set up the game
 
-7. Enter player names in circle order — the order you will pass the device. This is
+7. Enter player names in circle order, the order you will pass the device. This is
    the pass order, so get it right.
 8. Set the options: role counts, discussion time, voting style (Secret or Open), and
    volumes. The defaults are fine for a first game.

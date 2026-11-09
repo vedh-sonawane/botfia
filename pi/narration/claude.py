@@ -7,7 +7,7 @@ outcomes during the night, each possible vote result during the day), so by the
 time Botfia speaks, the good line is already waiting.
 
 If there is no API key, the SDK is missing, or the internet is down, everything
-still works — the game just uses the fallback bank.
+still works, the game just uses the fallback bank.
 """
 
 import re
@@ -26,7 +26,10 @@ def _clean(text):
     while len(t) >= 2 and t[0] in _QUOTES and t[-1] in _QUOTES:
         t = t[1:-1].strip()
     t = re.sub(r"[*_`#]+", "", t)          # markdown characters
+    _dash = chr(0x2014) + chr(0x2013) + chr(0x2015)   # em, en, horizontal bar
+    t = re.sub(r"\s*[" + _dash + r"]\s*", ", ", t)    # any dash to a comma
     t = re.sub(r"\s+", " ", t).strip()     # collapse newlines/whitespace
+    t = re.sub(r"\s+,", ",", t)            # tidy any " ," the swap can leave
     return t
 
 
@@ -64,7 +67,7 @@ class Narrator:
             cached = self._cache.get(_key(event, ctx))
         if cached:
             return cached
-        # Not pre-generated — speak instantly from the fallback bank, and ask
+        # Not pre-generated, speak instantly from the fallback bank, and ask
         # Claude to prepare an upgraded line for next time in the background.
         if self.enabled:
             self._spawn(event, ctx)

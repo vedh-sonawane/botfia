@@ -1,4 +1,4 @@
-"""Botfia light switch — drives the SG90 on the Pi to flip the wall switch.
+"""Botfia light switch, drives the SG90 on the Pi to flip the wall switch.
 
 Wiring (Raspberry Pi 5, BCM numbering):
   SG90 signal (orange) -> GPIO 18 (hardware PWM), physical pin 12
@@ -54,7 +54,7 @@ class _SysfsPWM:
         self.chan = f"{PWM_CHIP}/pwm{PWM_CHANNEL}"
         self.sim = not os.path.isdir(PWM_CHIP)
         if self.sim:
-            print("[light] no /sys/class/pwm — SIMULATION mode (no servo movement).")
+            print("[light] no /sys/class/pwm, SIMULATION mode (no servo movement).")
             return
         self._export()
         self._write("enable", 0)         # configure while disabled
