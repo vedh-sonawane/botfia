@@ -30,7 +30,7 @@ from pathlib import Path
 # ---- Servo timing ----
 PERIOD_NS = 20_000_000       # 20 ms period = 50 Hz
 MIN_US = 400                 # pulse width at 0 degrees (widened for more travel)
-MAX_US = 2600                # pulse width at 180 degrees (widened for more travel)
+MAX_US = 3400                # pulse width at 180 degrees (wide enough for the arm to reach the ON throw)
 
 PRESS_DWELL_S = 0.5          # hold the arm against the rocker this long
 SETTLE_S = 0.3              # let the arm settle after returning to REST

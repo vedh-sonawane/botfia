@@ -1,12 +1,12 @@
 {
-  "_comment": "Placeholder entries. Replace with your real downloaded tracks. Each entry: id (unique), file (path relative to music/), mood (one of: calm, uneasy, tense, final). The code checks the file exists before playing, so unreplaced placeholders simply never play. Use pi/audio/import_music.py to regenerate this file from your downloads, or edit by hand. See music/README.md for where to get tracks.",
+  "_comment": "Each entry: id (unique), file (path relative to music/), mood (one of: calm, uneasy, tense, final). Claude picks a mood by game state; the code plays a random track with that mood and checks the file exists first. Music by Kevin MacLeod (incompetech.com), CC BY 4.0 - see CREDITS.txt.",
   "tracks": [
-    { "id": "calm-01", "file": "REPLACE_calm_01.ogg", "mood": "calm" },
-    { "id": "calm-02", "file": "REPLACE_calm_02.ogg", "mood": "calm" },
-    { "id": "uneasy-01", "file": "REPLACE_uneasy_01.ogg", "mood": "uneasy" },
-    { "id": "uneasy-02", "file": "REPLACE_uneasy_02.ogg", "mood": "uneasy" },
-    { "id": "tense-01", "file": "REPLACE_tense_01.ogg", "mood": "tense" },
-    { "id": "tense-02", "file": "REPLACE_tense_02.ogg", "mood": "tense" },
-    { "id": "final-01", "file": "REPLACE_final_01.ogg", "mood": "final" }
+    { "id": "calm-private-reflection", "file": "calm_private_reflection.mp3", "mood": "calm" },
+    { "id": "calm-healing",            "file": "calm_healing.mp3",            "mood": "calm" },
+    { "id": "uneasy-long-note-two",    "file": "uneasy_long_note_two.mp3",    "mood": "uneasy" },
+    { "id": "uneasy-ossuary-1",        "file": "uneasy_ossuary_1.mp3",        "mood": "uneasy" },
+    { "id": "tense-crypto",            "file": "tense_crypto.mp3",            "mood": "tense" },
+    { "id": "tense-darkling",          "file": "tense_darkling.mp3",          "mood": "tense" },
+    { "id": "final-ossuary-6-air",     "file": "final_ossuary_6_air.mp3",     "mood": "final" }
   ]
 }

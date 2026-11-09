@@ -84,8 +84,7 @@ Path: GPIO 26 -> 220 ohm -> LED long leg -> LED short leg -> GND rail.
 ### Smile — two LEDs, both on GPIO 27 (in parallel)
 
 The two smile LEDs turn on and off together, so they share one pin. But each LED
-still needs its own 220 ohm resistor and its own wire to ground. Do not try to make
-two LEDs share a single resistor.
+still needs its own 220 ohm resistor and its own wire to ground. Do not try to make two LEDs share a single resistor.
 
 For each of the two smile LEDs:
 

@@ -129,6 +129,16 @@ class TTS:
             self.volume = float(_cfg("tts_volume", "BOTFIA_TTS_VOLUME", volume or 1.0))
         except (TypeError, ValueError):
             self.volume = 1.0
+        # Deepen / slow the voice so it reads calm and serious, not chirpy.
+        # pitch < 1.0 = deeper; tempo < 1.0 = slower. Applied with ffmpeg rubberband.
+        try:
+            self.pitch = float(_cfg("tts_pitch", "BOTFIA_TTS_PITCH", 0.84))
+        except (TypeError, ValueError):
+            self.pitch = 0.84
+        try:
+            self.tempo = float(_cfg("tts_tempo", "BOTFIA_TTS_TEMPO", 0.95))
+        except (TypeError, ValueError):
+            self.tempo = 0.95
 
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -153,7 +163,7 @@ class TTS:
 
     # --- synthesis ------------------------------------------------------------
     def _cache_path(self, text):
-        key = f"{self.voice}|{text}".encode("utf-8")
+        key = f"{self.voice}|{self.pitch}|{self.tempo}|{text}".encode("utf-8")
         digest = hashlib.sha256(key).hexdigest()[:32]
         return _CACHE_DIR / f"{digest}.wav"
 
@@ -178,7 +188,35 @@ class TTS:
         except (OSError, subprocess.SubprocessError) as e:
             log.warning("piper synth failed: %s", e)
             return False
+        if not (out_path.exists() and out_path.stat().st_size > 0):
+            return False
+        self._deepen(out_path)
         return out_path.exists() and out_path.stat().st_size > 0
+
+    def _deepen(self, wav_path):
+        """Pitch the voice down and slow it slightly (calm, serious tone) with
+        ffmpeg's rubberband filter. No-op if ffmpeg is missing or no change asked."""
+        if abs(self.pitch - 1.0) < 1e-3 and abs(self.tempo - 1.0) < 1e-3:
+            return
+        if shutil.which("ffmpeg") is None:
+            return
+        tmp = wav_path.with_suffix(".proc.wav")
+        af = f"rubberband=pitch={self.pitch}:tempo={self.tempo}"
+        try:
+            subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav_path),
+                 "-af", af, str(tmp)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                check=True, timeout=60,
+            )
+            if tmp.exists() and tmp.stat().st_size > 0:
+                tmp.replace(wav_path)
+        except (OSError, subprocess.SubprocessError):
+            try:
+                if tmp.exists():
+                    tmp.unlink()
+            except OSError:
+                pass
 
     def prerender(self, text):
         """Render `text` to a cached wav and return its path (no playback).
@@ -216,14 +254,16 @@ class TTS:
 
 
 # --- audio player selection ---------------------------------------------------
-# Pick whatever is installed at runtime. On the Pi this is aplay (ALSA), which
-# sends audio to the default sink (the Sony speaker once it is the Bluetooth
-# default). Windows/macOS/dev machines fall back to ffplay/afplay/winsound.
+# Pick whatever is installed at runtime. On the Pi this is pw-play, which sends
+# audio straight to the PipeWire default sink (the Sony speaker once it is the
+# Bluetooth default) with no ALSA-routing guesswork. aplay/paplay are kept as
+# fallbacks; Windows/macOS/dev machines fall back to ffplay/afplay/winsound.
 
 def _pick_player():
     """Return a tag for the best available wav player, or None."""
-    for tool, tag in (("aplay", "aplay"), ("paplay", "paplay"),
-                      ("ffplay", "ffplay"), ("afplay", "afplay")):
+    for tool, tag in (("pw-play", "pw-play"), ("ffplay", "ffplay"),
+                      ("aplay", "aplay"), ("paplay", "paplay"),
+                      ("afplay", "afplay")):
         if shutil.which(tool):
             return tag
     if sys.platform.startswith("win"):
@@ -252,7 +292,10 @@ def _play(wav_path, volume=1.0, blocking=True):
             winsound.PlaySound(wav, flags)
             return
 
-        if player == "aplay":
+        if player == "pw-play":
+            vol = max(0.0, min(1.0, volume))
+            cmd = ["pw-play", f"--volume={vol}", wav]
+        elif player == "aplay":
             cmd = ["aplay", "-q", wav]
         elif player == "paplay":
             vol = max(0, min(65536, int(volume * 65536)))

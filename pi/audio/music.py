@@ -61,6 +61,7 @@ class Music:
         self._base_volume = _cfg_float("music_volume", 0.35)
         self._duck_volume = _cfg_float("music_duck_volume", 0.12)
         self._ducked = False
+        self._enabled = True         # host can switch music off entirely
         self._proc = None            # the live ffplay process, if any
         self._current_file = None    # Path of the track currently playing
         self._tracks = self._load_tracks()
@@ -147,6 +148,8 @@ class Music:
         volume and stop the old one. For quiet background loops this reads as a
         smooth change, and it keeps memory and code minimal.
         """
+        if not self._enabled:
+            return
         if mood not in MOODS:
             log.warning("music: unknown mood %r; ignoring", mood)
             return
@@ -193,3 +196,27 @@ class Music:
         """Stop music entirely."""
         self._kill()
         self._current_file = None
+
+    # ---- host controls -------------------------------------------------------
+    def set_enabled(self, on):
+        """Turn background music on or off. Off stops any current track."""
+        self._enabled = bool(on)
+        if not self._enabled:
+            self.stop()
+
+    def set_volume(self, v):
+        """Set the base music volume (0.0-1.0) and apply it live if playing."""
+        try:
+            v = float(v)
+        except (TypeError, ValueError):
+            return
+        self._base_volume = max(0.0, min(1.0, v))
+        self._restart_at_current_volume()
+
+    def status(self):
+        """Health/UI snapshot."""
+        return {
+            "available": self.is_available(),
+            "enabled": self._enabled,
+            "volume": round(self._base_volume, 2),
+        }

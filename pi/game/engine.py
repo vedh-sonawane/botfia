@@ -32,6 +32,7 @@ ROLE_BLURB = {
     "doctor": "Each night, choose someone to protect.",
     "detective": "Each night, check one person. You learn if they are mafia.",
     "villager": "No night action. Find the mafia by day.",
+    "jester": "No night action. Get the town to vote you out. If they do, you win.",
 }
 
 
@@ -92,6 +93,7 @@ class GameEngine:
         self._voting_style = "secret"
         self._revote_on_tie = True
         self._discussion_seconds = 180
+        self._include_jester = False   # optional role: wins if voted out by day
 
     # ---------------------------------------------------------------- setup
     def configure(self, names, options=None):
@@ -100,8 +102,8 @@ class GameEngine:
         names = [str(n).strip()[:20] or f"Player {i+1}" for i, n in enumerate(names)]
         if len(names) < 4:
             raise ValueError("need at least 4 players")
-        if len(names) > 12:
-            raise ValueError("max 12 players")
+        if len(names) > 30:
+            raise ValueError("max 30 players")
         self.players = [Player(i, n) for i, n in enumerate(names)]
         opts = options or {}
         self._doctor_no_repeat = bool(opts.get("doctor_no_repeat", True))
@@ -109,17 +111,23 @@ class GameEngine:
         self._voting_style = opts.get("voting_style", "secret")
         self._revote_on_tie = bool(opts.get("revote_on_tie", True))
         self._discussion_seconds = int(opts.get("discussion_seconds", 180))
+        self._include_jester = bool(opts.get("include_jester", False))
+
+    def _role_counts(self, n):
+        """Roles for any player count: always exactly ONE mafia, one doctor, and
+        one detective. Everyone else is a villager, so more players just means
+        more villagers."""
+        return {"mafia": 1, "doctor": 1, "detective": 1, "villager": max(0, n - 3)}
 
     def start(self):
         n = len(self.players)
-        key = str(n)
-        if key not in self.role_table:
-            raise ValueError(f"no role setup for {n} players")
         bag = []
-        for role, count in self.role_table[key].items():
+        for role, count in self._role_counts(n).items():
             bag += [role] * count
         if len(bag) != n:
             raise ValueError("role counts do not match player count")
+        if self._include_jester and "villager" in bag:
+            bag[bag.index("villager")] = "jester"   # one villager becomes the jester
         random.shuffle(bag)
         for p, role in zip(self.players, bag):
             p.role = role
@@ -226,10 +234,13 @@ class GameEngine:
                 self._doctor_protect = target.seat
         elif cur.role == "detective":
             if target and target.alive:
+                # Red if the target reads as a threat — mafia OR jester. The
+                # detective sees only a colour, so a red is not proof of mafia
+                # (it could be the jester), and green is not proof of innocence.
                 self._detective_results[cur.seat] = {
                     "seat": target.seat,
                     "name": target.name,
-                    "is_mafia": target.role == "mafia",
+                    "suspicious": target.role in ("mafia", "jester"),
                 }
         # villager: decoy pick, nothing recorded.
 
@@ -321,6 +332,12 @@ class GameEngine:
             self._emit("vote_out", name=out.name)
             if self._reveal_roles_on_death:
                 self._emit("reveal_role", name=out.name, role=out.role)
+            if out.role == "jester":
+                # The jester's whole goal is being voted out. They win now.
+                self.winner = "jester"
+                self.phase = "end"
+                self._emit("jester_win", name=out.name)
+                return
         elif tie:
             self._last_vote = {"out": None, "tie": True}
             self._emit("vote_tie")
@@ -337,6 +354,16 @@ class GameEngine:
         if self.phase != "day" or self.winner:
             return
         self.begin_night()
+
+    def end_now(self):
+        """Host force-ends the game: jump straight to the end screen and reveal
+        every role. Used from the admin controls."""
+        if self.phase == "end":
+            return
+        self.phase = "end"
+        self._stage = None
+        if not self.winner:
+            self.winner = "ended"
 
     # ------------------------------------------------------------- win check
     def _check_win(self):
@@ -392,7 +419,7 @@ class GameEngine:
                 "winner": self.winner,
             }
         if p == "day":
-            return {
+            d = {
                 "screen": "day",
                 "stage": self._day_stage,
                 "line": self.public_log[-1] if self.public_log else "",
@@ -400,6 +427,10 @@ class GameEngine:
                 "voting_style": self._voting_style,
                 "last_vote": self._last_vote,
             }
+            if self._day_stage == "discussion":
+                d["alive"] = [pl.name for pl in self._alive()]
+                d["prompt"] = "Talk it out. Who is lying?"
+            return d
         if p == "end":
             return {
                 "screen": "end",
@@ -447,9 +478,12 @@ class GameEngine:
                 d["options"] = self._alive_options(exclude_self_seat=cur.seat)
                 res = self._detective_results.get(cur.seat)
                 if res:
-                    d["result"] = {"name": res["name"], "is_mafia": res["is_mafia"]}
+                    d["result"] = {"name": res["name"], "suspicious": res["suspicious"]}
             else:
-                d["prompt"] = "Who do you suspect most?"
+                # Villager decoy: same shape as the real roles (prompt + name
+                # list + pass) so turns look identical, but neutral wording that
+                # gives nothing away and doesn't read like the day vote.
+                d["prompt"] = "Choose someone."
                 d["options"] = self._alive_options(exclude_self_seat=cur.seat)
             return d
         if p == "vote":

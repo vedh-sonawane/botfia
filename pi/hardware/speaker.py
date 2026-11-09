@@ -34,7 +34,42 @@ class Speaker:
             if line.startswith("Name:"):
                 name = line.split("Name:", 1)[1].strip()
                 break
-        return {"available": True, "connected": connected, "name": name}
+        return {"available": True, "connected": connected, "name": name,
+                "volume": self.get_volume()}
+
+    # --- speaker output volume (the real sink level; affects everything) ------
+    _SINK = "@DEFAULT_AUDIO_SINK@"
+
+    def get_volume(self):
+        """Return the speaker output volume 0.0-1.0 (via PipeWire), or None."""
+        if shutil.which("wpctl") is None:
+            return None
+        try:
+            out = subprocess.run(["wpctl", "get-volume", self._SINK],
+                                  capture_output=True, text=True, timeout=5).stdout
+        except Exception:
+            return None
+        for tok in out.replace("Volume:", " ").split():   # "Volume: 0.60 [MUTED]"
+            try:
+                return max(0.0, min(1.0, float(tok)))
+            except ValueError:
+                continue
+        return None
+
+    def set_volume(self, v):
+        """Set the speaker output volume 0.0-1.0 (affects narration + music)."""
+        if shutil.which("wpctl") is None:
+            return False
+        try:
+            v = max(0.0, min(1.0, float(v)))
+        except (TypeError, ValueError):
+            return False
+        try:
+            subprocess.run(["wpctl", "set-volume", self._SINK, f"{v:.2f}"],
+                           capture_output=True, text=True, timeout=5)
+            return True
+        except Exception:
+            return False
 
     def connect(self):
         if not self._have_bt or not self.mac:

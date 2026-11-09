@@ -1,7 +1,10 @@
 # Botfia autostart. Copy to /etc/systemd/system/botfia.service on the Pi, then:
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now botfia
+#   sudo loginctl enable-linger milo   # so PipeWire runs for audio at boot (no login)
 # Adjust User and the paths if your username or project location differ.
+# XDG_RUNTIME_DIR lets the service reach the user's PipeWire (Bluetooth sink);
+# SDL_AUDIODRIVER=pipewire makes ffplay (music) route there too. Both assume UID 1000.
 
 [Unit]
 Description=Botfia — Mafia host
@@ -14,6 +17,8 @@ User=milo
 WorkingDirectory=/home/milo/botfia
 EnvironmentFile=-/home/milo/botfia/.env
 Environment=BOTFIA_PORT=80
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=SDL_AUDIODRIVER=pipewire
 ExecStart=/home/milo/botfia/pi/.venv/bin/python -m pi.app
 Restart=always
 RestartSec=3

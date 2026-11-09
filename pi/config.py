@@ -15,7 +15,7 @@ CONFIG_PATH = Path(__file__).with_name("botfia_config.json")
 DEFAULTS = {
     # Narration
     "narration_model": "claude-sonnet-4-6",   # current Sonnet; sonnet-5-5 is not real
-    "max_tokens": 120,
+    "max_tokens": 110,   # a tight 2-sentence (~40 word) narrated scene
 
     # Game pacing / rules (editable in setup)
     "min_turn_seconds": 4.0,        # equal turn-time floor so roles can't be timed

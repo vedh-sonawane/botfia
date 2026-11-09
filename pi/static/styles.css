@@ -80,7 +80,7 @@ body {
 .screen { flex: 1; display: flex; flex-direction: column; justify-content: flex-start;
   padding: 8px 0 20px; }
 .view { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column;
-  animation: rise var(--speed) var(--ease) both; }
+  animation: rise .2s var(--ease) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -204,6 +204,36 @@ body {
 .health .h b { font-weight: 500; color: var(--text); }
 .health .h .s { color: var(--danger); }
 .health .h .s.ok { color: #4e8d5b; }
+
+/* music control in the host sheet */
+.sheet .music { display: grid; gap: 12px; margin: 0 0 14px; }
+.sheet .music-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet .music-head b { font-weight: 500; color: var(--text); font-size: 14px; }
+.sheet .toggle { font-size: 13px; padding: 6px 18px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--muted);
+  letter-spacing: .02em; transition: color var(--speed) var(--ease), border-color var(--speed) var(--ease); }
+.sheet .toggle.on { border-color: var(--accent); color: var(--accent); }
+.vol { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; margin: 2px 0 4px;
+  border-radius: 999px; background: var(--line); outline: none; }
+.vol::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--accent); border: 0; cursor: pointer; }
+.vol::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+  border: 0; cursor: pointer; }
+
+/* alive-player chips on the day discussion screen */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 18px 0 4px; }
+.chip { font-size: 13px; padding: 5px 13px; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--muted); background: var(--surface-2); animation: rise var(--speed) var(--ease) both; }
+
+/* detective verdict — a colour, not a label. red = mafia OR jester; green = clear */
+.verdict { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.verdict-dot { width: 76px; height: 76px; border-radius: 50%; }
+.verdict.green .verdict-dot { background: #4e8d5b; box-shadow: 0 0 40px rgba(78,141,91,0.45); }
+.verdict.red .verdict-dot { background: var(--danger); box-shadow: 0 0 40px rgba(182,91,83,0.5); }
+.verdict-name { font-size: 26px; margin: 0; }
+.verdict-word { font-size: 12px; letter-spacing: .2em; text-transform: uppercase; margin: 0; }
+.verdict.green .verdict-word { color: #4e8d5b; }
+.verdict.red .verdict-word { color: var(--danger); }
 
 /* toast */
 .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom));

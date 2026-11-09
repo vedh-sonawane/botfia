@@ -10,10 +10,24 @@ If there is no API key, the SDK is missing, or the internet is down, everything
 still works — the game just uses the fallback bank.
 """
 
+import re
 import threading
 
 from . import fallback
 from . import prompts
+
+_QUOTES = "\"'“”‘’"
+
+
+def _clean(text):
+    """Strip anything the TTS would read aloud wrong: wrapping quotes, markdown
+    emphasis/headings (* _ ` #), and stray newlines. Returns plain spoken prose."""
+    t = (text or "").strip()
+    while len(t) >= 2 and t[0] in _QUOTES and t[-1] in _QUOTES:
+        t = t[1:-1].strip()
+    t = re.sub(r"[*_`#]+", "", t)          # markdown characters
+    t = re.sub(r"\s+", " ", t).strip()     # collapse newlines/whitespace
+    return t
 
 
 def _key(event, ctx):
@@ -84,8 +98,7 @@ class Narrator:
                 system=system,
                 messages=[{"role": "user", "content": user}],
             )
-            text = "".join(b.text for b in resp.content if b.type == "text").strip()
-            text = text.strip('"').strip()
+            text = _clean("".join(b.text for b in resp.content if b.type == "text"))
             if text:
                 with self._lock:
                     self._cache[_key(event, ctx)] = text

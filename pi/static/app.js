@@ -27,8 +27,19 @@ async function post(path, body) {
   const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : null });
   const json = await r.json();
-  setTimeout(() => loop(), 50);   // refresh the screen right after any action
+  // Render straight from the action's response — one round-trip, no waiting on
+  // a second fetch, so the screen changes the instant the Pi replies.
+  if (json && json.device && json.state) render(json.device, json.state);
+  else setTimeout(() => loop(), 50);
   return json;
+}
+// Fire-and-forget POST with no screen refresh — for the volume slider, so
+// dragging it doesn't thrash the UI on every step.
+async function postQuiet(path, body) {
+  try {
+    await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : null });
+  } catch (e) {}
 }
 
 // ---------- device niceties ----------
@@ -129,10 +140,23 @@ function buildScreen(d, s) {
 }
 
 // --- lobby / setup ---
+// Setup persists to localStorage so a refresh (or the auto-update reload) never
+// loses the typed names or chosen options.
+function loadNames() {
+  try { const v = JSON.parse(localStorage.getItem('botfia_names')); if (Array.isArray(v) && v.length >= 4) return v; } catch (e) {}
+  return ['', '', '', '', ''];
+}
+function saveNames(names) { try { localStorage.setItem('botfia_names', JSON.stringify(names)); } catch (e) {} }
+function loadOpts() {
+  const def = { voting_style: 'secret', discussion_seconds: 180, reveal_roles_on_death: true, include_jester: false };
+  try { const v = JSON.parse(localStorage.getItem('botfia_opts')); if (v && typeof v === 'object') return Object.assign(def, v); } catch (e) {}
+  return def;
+}
+function saveOpts(opts) { try { localStorage.setItem('botfia_opts', JSON.stringify(opts)); } catch (e) {} }
+
 function lobby(s) {
-  const names = (lobby._names ||= ['', '', '', '', '']);
-  const opts = (lobby._opts ||= { voting_style: 'secret', discussion_seconds: 180,
-    reveal_roles_on_death: true });
+  const names = (lobby._names ||= loadNames());
+  const opts = (lobby._opts ||= loadOpts());
   const wrap = h('div', {});
   wrap.append(h('p', { class: 'kicker' }, 'New game'),
     h('h1', { class: 'display serif' }, 'Who is playing?'),
@@ -143,19 +167,21 @@ function lobby(s) {
     list.innerHTML = '';
     names.forEach((n, i) => {
       const inp = h('input', { class: 'input', placeholder: `Player ${i + 1}`, value: n, maxlength: 20,
-        oninput: (e) => { names[i] = e.target.value; } });
-      const x = h('button', { class: 'x', onclick: () => { names.splice(i, 1); drawList(); } }, '×');
+        oninput: (e) => { names[i] = e.target.value; saveNames(names); } });
+      const x = h('button', { class: 'x', onclick: () => { names.splice(i, 1); saveNames(names); drawList(); } }, '×');
       list.append(h('div', { class: 'player-row' }, [h('span', { class: 'idx' }, i + 1), inp, names.length > 4 ? x : h('span', { style: 'width:44px' })]));
     });
   }
   drawList();
-  const add = h('button', { class: 'btn quiet', onclick: () => { if (names.length < 12) { names.push(''); drawList(); } } }, '+  Add player');
+  const add = h('button', { class: 'btn quiet', onclick: () => { if (names.length < 30) { names.push(''); saveNames(names); drawList(); } } }, '+  Add player');
 
   // options
   const voteSeg = h('div', { class: 'seg' }, ['secret', 'open'].map((v) =>
-    h('button', { 'aria-pressed': opts.voting_style === v ? 'true' : 'false', onclick: () => { opts.voting_style = v; voteSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', ['secret', 'open'][k] === v ? 'true' : 'false')); } }, v[0].toUpperCase() + v.slice(1))));
+    h('button', { 'aria-pressed': opts.voting_style === v ? 'true' : 'false', onclick: () => { opts.voting_style = v; saveOpts(opts); voteSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', ['secret', 'open'][k] === v ? 'true' : 'false')); } }, v[0].toUpperCase() + v.slice(1))));
   const timeSeg = h('div', { class: 'seg' }, [[120, '2m'], [180, '3m'], [300, '5m']].map(([v, t]) =>
-    h('button', { 'aria-pressed': opts.discussion_seconds === v ? 'true' : 'false', onclick: () => { opts.discussion_seconds = v; timeSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', [120, 180, 300][k] === v ? 'true' : 'false')); } }, t)));
+    h('button', { 'aria-pressed': opts.discussion_seconds === v ? 'true' : 'false', onclick: () => { opts.discussion_seconds = v; saveOpts(opts); timeSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', [120, 180, 300][k] === v ? 'true' : 'false')); } }, t)));
+  const jesterSeg = h('div', { class: 'seg' }, [['off', 'Off'], ['on', 'On']].map(([v, t]) =>
+    h('button', { 'aria-pressed': (opts.include_jester ? 'on' : 'off') === v ? 'true' : 'false', onclick: () => { opts.include_jester = (v === 'on'); saveOpts(opts); jesterSeg.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-pressed', ['off', 'on'][k] === v ? 'true' : 'false')); } }, t)));
 
   const start = h('button', { class: 'btn primary', style: 'margin-top:12px', onclick: async () => {
     const clean = names.map((n) => n.trim()).filter(Boolean);
@@ -168,6 +194,8 @@ function lobby(s) {
   wrap.append(list, add,
     h('div', { class: 'row' }, [h('span', { class: 'lab' }, 'Voting'), voteSeg]),
     h('div', { class: 'row' }, [h('span', { class: 'lab' }, 'Discussion'), timeSeg]),
+    h('div', { class: 'row' }, [h('span', { class: 'lab' }, 'Jester'), jesterSeg]),
+    h('p', { class: 'sub', style: 'margin-top:-6px;font-size:13px' }, 'Jester: one player secretly wins if the town votes them out.'),
     start);
   return wrap;
 }
@@ -225,9 +253,13 @@ function nightTurn(d) {
   wrap.append(h('p', { class: 'kicker' }, 'Night'), h('h2', { class: 'lead serif' }, d.prompt));
 
   if (d.kind === 'detective' && d.result) {
+    const red = !!d.result.suspicious;
     const card = holdReveal('Hold to see the result', () =>
-      h('p', { class: 'role-name serif', style: 'font-size:28px' },
-        d.result.name + (d.result.is_mafia ? ' is mafia.' : ' is not mafia.')));
+      h('div', { class: 'verdict ' + (red ? 'red' : 'green') }, [
+        h('div', { class: 'verdict-dot' }),
+        h('p', { class: 'verdict-name serif' }, d.result.name),
+        h('p', { class: 'verdict-word' }, red ? 'Suspicious' : 'Clear'),
+      ]));
     wrap.append(h('div', { style: 'margin:22px 0' }, card));
   } else {
     const list = optionList(d.options, (seat) => post('/api/night/submit', { target: seat }), d);
@@ -242,7 +274,7 @@ function morning(d) {
   return h('div', { class: 'center' }, [
     h('div', { class: 'spacer' }),
     h('p', { class: 'kicker' }, 'Morning'),
-    h('h1', { class: 'display serif' }, d.line || (d.died ? d.died + ' did not wake up.' : 'Everyone is still here.')),
+    h('h1', { class: 'display serif' }, d.died ? d.died + ' did not wake up.' : 'Everyone is still here.'),
     h('div', { class: 'spacer' }),
     h('button', { class: 'btn primary', onclick: () => post('/api/morning/continue') }, 'Continue'),
   ]);
@@ -268,11 +300,15 @@ function discussion(d, s) {
     if (dayTimer.remaining === 0) { haptic(40); }
   }, 1000);
   discussion._ctl = dayTimer;
+  const alive = d.alive || (s.players || []).filter((p) => p.alive).map((p) => p.name);
+  const chips = h('div', { class: 'chips' }, alive.map((n) => h('span', { class: 'chip' }, n)));
   return h('div', {}, [
     h('div', { class: 'spacer' }),
     h('p', { class: 'kicker center' }, 'Day ' + s.day_number + ' — ' + s.alive_count + ' left'),
     h('div', { class: 'count' }, [timeEl, h('div', { class: 'bar-track' }, fillEl)]),
-    h('p', { class: 'sub center' }, 'Talk it over. Decide who to vote out.'),
+    h('h2', { class: 'lead serif center', style: 'margin:10px 0 4px' }, d.prompt || 'Talk it out. Who is lying?'),
+    h('p', { class: 'sub center' }, d.line || 'Make your case. Accuse, defend, decide.'),
+    chips,
     h('div', { class: 'spacer' }), voteBtn,
   ]);
 }
@@ -281,7 +317,10 @@ function postVote(d) {
   return h('div', { class: 'center' }, [
     h('div', { class: 'spacer' }),
     h('p', { class: 'kicker' }, 'The vote'),
-    h('h1', { class: 'display serif' }, d.line || 'The vote is in.'),
+    h('h1', { class: 'display serif' },
+      (d.last_vote && d.last_vote.out) ? d.last_vote.out + ' was voted out.'
+        : (d.last_vote && d.last_vote.tie) ? 'The vote was tied. No one leaves.'
+        : 'No one was voted out.'),
     h('div', { class: 'spacer' }),
     h('button', { class: 'btn primary', onclick: () => post('/api/day/continue') }, 'Begin night'),
   ]);
@@ -324,7 +363,7 @@ function endScreen(d) {
   return h('div', {}, [
     h('div', { class: 'spacer' }),
     h('p', { class: 'kicker center' }, 'Game over'),
-    h('h1', { class: 'result serif center' }, d.winner === 'mafia' ? 'The mafia wins.' : 'The town wins.'),
+    h('h1', { class: 'result serif center' }, d.winner === 'mafia' ? 'The mafia wins.' : d.winner === 'jester' ? 'The jester wins.' : d.winner === 'ended' ? 'Game ended.' : 'The town wins.'),
     list,
     h('div', { class: 'spacer' }),
     h('button', { class: 'btn primary', onclick: () => { lobby._names = null; lobby._opts = null; post('/api/restart'); } }, 'New game'),
@@ -371,6 +410,7 @@ function timedDone(label, action, minSeconds, extraOk) {
 function fmt(sec) { const m = Math.floor(sec / 60), s = sec % 60; return m + ':' + String(s).padStart(2, '0'); }
 
 // ---------- host sheet (hidden behind a deliberate long-press on the wordmark) ----------
+let hostMusicOn = null, hostVol = null;   // client-side music-on + speaker-volume state for the host sheet
 (function hostControls() {
   const brand = $('#brand'); let t;
   const open = () => openHostSheet();
@@ -388,6 +428,30 @@ async function openHostSheet() {
     h('span', { class: 's' + (ok ? ' ok' : '') }, ok ? (extra || 'ok') : 'off')]);
   sheet.innerHTML = '';
   sheet.hidden = false;
+  // Music on/off + volume. Track locally so the control responds instantly
+  // (health only refreshes every few seconds).
+  const m = hl.music || {};
+  if (hostMusicOn === null) hostMusicOn = (m.enabled !== false);
+  if (hostVol === null) hostVol = (m.volume != null ? m.volume : 0.35);
+  const musicRow = h('div', { class: 'music' }, [
+    h('div', { class: 'music-head' }, [
+      h('b', {}, 'Music'),
+      h('button', {
+        class: 'toggle' + (hostMusicOn ? ' on' : ''),
+        onclick: () => { hostMusicOn = !hostMusicOn; post('/api/host/music', { on: hostMusicOn }); openHostSheet(); },
+      }, hostMusicOn ? 'On' : 'Off'),
+    ]),
+  ]);
+  if (hostMusicOn) {
+    musicRow.append(
+      h('div', { class: 'music-head', style: 'margin-top:2px' }, [h('b', {}, 'Music volume')]),
+      h('input', {
+        type: 'range', min: '0', max: '100', step: '1', class: 'vol',
+        value: String(Math.round(hostVol * 100)), 'aria-label': 'Music volume',
+        onchange: (e) => { hostVol = Number(e.target.value) / 100; postQuiet('/api/host/music_volume', { volume: hostVol }); },
+      }),
+    );
+  }
   sheet.append(
     h('h3', {}, 'Host'),
     h('div', { class: 'health' }, [
@@ -397,12 +461,15 @@ async function openHostSheet() {
       hrow('Voice', hl.tts?.available),
       hrow('Light', !!hl.light),
     ]),
+    musicRow,
     h('div', { class: 'grid' }, [
       hbtn('Pause', () => { if (discussion._ctl) { discussion._ctl.paused = !discussion._ctl.paused; toast(discussion._ctl.paused ? 'Paused' : 'Running'); } }),
       hbtn('+30s', () => { if (discussion._ctl) { discussion._ctl.remaining += 30; toast('+30 seconds'); } }),
+      hbtn('Repeat line', () => { post('/api/host/repeat'); toast('Repeating'); }),
       hbtn('Light test', () => post('/api/host/light_test')),
       hbtn('Skip to vote', () => post('/api/start_vote')),
-      hbtn('Restart game', () => { if (confirm('Restart the game?')) { lobby._names = null; post('/api/restart'); } }),
+      hbtn('End game', () => { if (confirm('End the game now and reveal every role?')) post('/api/host/end'); }),
+      hbtn('Restart game', () => { if (confirm('Restart the game?')) post('/api/restart'); }),
       hbtn('Close', () => { sheet.hidden = true; }),
     ]),
   );
@@ -438,4 +505,14 @@ loop();
 setInterval(loop, 900);
 
 // register the service worker for installable PWA + offline shell
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  // When a freshly deployed worker takes control, reload once so the new
+  // app.js/styles.css actually load — no manual cache-clearing needed.
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    location.reload();
+  });
+}

@@ -11,17 +11,20 @@ cards. Botfia assigns roles itself and the device is passed around the circle.
 NOTHING IN THIS PROJECT SHOULD BE CRINGE. Narration, UI, text, music, names, code
 comments, docs. Everything.
 
-- NARRATION IS SHORT, CALM, DRY, AND SERIOUS. A quiet, confident narrator.
-  Understated is creepier than dramatic.
-- NO JOKES, NO PUNS, NO CATCHPHRASES, NO EVIL LAUGHS, NO "MWAHAHA", NO EMOJIS,
-  NO EXCLAMATION MARKS.
-- NO CLICHES: no "darkness descends", "fate", "sinister", "doom", "the night is
-  young", "a chill in the air".
-- SAY THE MINIMUM. Right tone: "The town is asleep." / "Morning. Daniel did not
-  wake up."
+- NARRATION IS STORYTELLING: each line is a short SCENE (3-4 sentences), not a
+  status update — set the place, show what happens, let a moment play out. One
+  consistent world: a small lamplit town at the edge of the woods where people
+  vanish in the night. Build atmosphere and quiet menace; invent vivid concrete
+  details (an unlatched door, boots in the wet leaves, an empty chair). Deaths
+  carry weight, but keep them eerie and cinematic — never gory, goofy, or cringe.
+- Use players' names. Make each night read like the next chapter of one tale.
+- NEVER leak secrets: the storyteller only knows PUBLIC facts (who died, who was
+  voted out, how many remain) and never hints at roles or how the game decided.
+- NO PUNS, NO JOKES, NO CATCHPHRASES, NO EVIL LAUGHS, NO EMOJIS, NO
+  EXCLAMATION-MARK SPAM, NO tired clichés ("darkness descends", "a chill in the air").
 - MUSIC IS INSTRUMENTAL AND QUIET. NO SOUND EFFECTS: no thunder, wolves, screams,
   creaking doors.
-- IF YOU ARE UNSURE WHETHER SOMETHING IS CRINGE, IT IS. LEAVE IT OUT.
+- IF A LINE FEELS TRY-HARD, GENERIC, OR CRINGE, CUT IT.
 
 ## UI RULES — NO COMPROMISE
 
@@ -45,9 +48,10 @@ like the best premium app you've used.
 One device (phone, tablet, or laptop on the Pi's Wi-Fi) opens the web app and is
 passed around the circle.
 
-Roles: Mafia, Doctor, Detective, Villager. Default counts (editable in setup):
-- 5-6 players: 1 Mafia; 7-9: 2 Mafia; 10-12: 3 Mafia. Always 1 Doctor, 1
-  Detective. Everyone else is a Villager.
+Roles: Mafia, Doctor, Detective, Villager (+ optional Jester). Counts:
+- Always exactly 1 Mafia, 1 Doctor, 1 Detective, no matter the player count.
+  Everyone else is a Villager (more players just means more villagers). The
+  optional Jester takes one villager slot.
 
 SETUP
 - Host enters player names in circle order (the pass order) and can adjust role
@@ -129,8 +133,8 @@ servo is local to the Pi (direct GPIO), no network.
 - Anthropic Python SDK. API key in `.env` (`ANTHROPIC_API_KEY`), never committed.
 - Model in config. Default for narration: `claude-sonnet-4-6` (the current Sonnet;
   `claude-sonnet-5-5` is not a real model id).
-- The narration prompt includes the STYLE RULES word for word. Max two sentences
-  per line.
+- The narration prompt includes the STYLE RULES word for word. Each line is a
+  short scene, about 3-4 sentences.
 - GAME LOGIC IS PLAIN CODE. Claude only writes lines and picks music. Claude never
   decides outcomes.
 - NEVER LEAK SECRETS. Public narration and its prompts only ever get public

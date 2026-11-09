@@ -116,6 +116,23 @@ class BotfiaSession:
         except Exception:
             pass
 
+    def end_game(self):
+        """Host force-ends the current game and returns to a safe state."""
+        self.engine.end_now()
+        try:
+            self.light.on()
+            self.esp32.face_off(self.fade_ms)
+            self.music.stop()
+        except Exception:
+            pass
+        self._after()
+
+    def repeat_last(self):
+        """Re-speak the most recent narration line."""
+        log = self.engine.public_log
+        if log and log[-1]:
+            self._speak_q.put(log[-1])
+
     # ------------------------------------------------------- pre-generation
     def _pregen_morning(self):
         self.narrator.pregenerate("morning_safe")
@@ -203,7 +220,7 @@ class BotfiaSession:
                     "speaker": self.speaker.status(),
                     "claude": {"enabled": self.narrator.enabled},
                     "tts": {"available": self.tts.is_available()},
-                    "music": {"available": self.music.is_available()},
+                    "music": self.music.status(),
                     "light": self.light.status(),
                 }
             except Exception:

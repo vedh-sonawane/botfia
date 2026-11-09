@@ -71,11 +71,12 @@ def drive(engine, on_state=None, pick=0, max_steps=3000):
 
 # ------------------------------------------------------------------ tests
 def test_roles_assigned():
+    # Always exactly one mafia, one doctor, one detective; the rest villagers.
     g = new_game(7)
     counts = {}
     for p in g.players:
         counts[p.role] = counts.get(p.role, 0) + 1
-    assert counts == {"mafia": 2, "doctor": 1, "detective": 1, "villager": 3}, counts
+    assert counts == {"mafia": 1, "doctor": 1, "detective": 1, "villager": 4}, counts
 
 
 def test_public_players_never_have_roles():

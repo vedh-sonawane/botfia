@@ -29,6 +29,12 @@ def build_app(session):
         t = body.get("target", None)
         return int(t) if t is not None else None
 
+    def _ok(ok=True):
+        # Return the new screen with the action result so the client can render
+        # instantly — no second round-trip to fetch the next screen.
+        return jsonify(ok=ok, device=session.device_state(),
+                       state=session.public_state())
+
     @app.route("/")
     def index():
         return send_from_directory(STATIC, "index.html")
@@ -48,7 +54,7 @@ def build_app(session):
             session.configure(body.get("names", []), body.get("options", {}))
         except ValueError as e:
             return jsonify(error=str(e)), 400
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/start")
     def api_start():
@@ -56,68 +62,113 @@ def build_app(session):
             session.start()
         except ValueError as e:
             return jsonify(error=str(e)), 400
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/begin_turn")
     def api_begin_turn():
         session.begin_turn()
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/finish_turn")
     def api_finish_turn():
-        return jsonify(ok=session.finish_turn())
+        ok = session.finish_turn()
+        return _ok(ok)
 
     @app.post("/api/night/submit")
     def api_night_submit():
         session.submit_night(target())
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/begin_night")
     def api_begin_night():
         session.begin_night()
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/morning/continue")
     def api_morning_continue():
         session.morning_continue()
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/start_vote")
     def api_start_vote():
         session.start_vote()
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/vote/submit")
     def api_vote_submit():
         session.submit_vote(target())
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/vote/open")
     def api_vote_open():
         session.set_open_vote(target())
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/day/continue")
     def api_day_continue():
         session.day_continue()
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/restart")
     def api_restart():
         session.restart()
-        return jsonify(ok=True)
+        return _ok()
 
     @app.post("/api/host/light_test")
     def api_light_test():
         try:
             session.light.off()
-            session.esp32.face_on(300)
-            time.sleep(0.8)
+            session.esp32.face_on(500)
+            time.sleep(3.5)          # hold so the glowing eyes + smile are clearly visible
             session.light.on()
-            session.esp32.face_off(300)
+            session.esp32.face_off(500)
         except Exception:
             pass
-        return jsonify(ok=True)
+        return _ok()
+
+    @app.post("/api/host/music")
+    def api_music():
+        on = bool((request.get_json(silent=True) or {}).get("on", True))
+        try:
+            session.music.set_enabled(on)
+        except Exception:
+            pass
+        return _ok()
+
+    @app.post("/api/host/music_volume")
+    def api_music_volume():
+        data = request.get_json(silent=True) or {}
+        try:
+            session.music.set_volume(data.get("volume"))
+        except Exception:
+            pass
+        return _ok()
+
+    @app.post("/api/host/volume")
+    def api_volume():
+        """Set the real speaker output level (affects narration AND music)."""
+        data = request.get_json(silent=True) or {}
+        try:
+            session.speaker.set_volume(data.get("volume"))
+        except Exception:
+            pass
+        return _ok()
+
+    @app.post("/api/host/repeat")
+    def api_repeat():
+        try:
+            session.repeat_last()
+        except Exception:
+            pass
+        return _ok()
+
+    @app.post("/api/host/end")
+    def api_end():
+        try:
+            session.end_game()
+        except Exception:
+            pass
+        return _ok()
 
     return app
 
